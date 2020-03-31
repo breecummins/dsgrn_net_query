@@ -27,7 +27,11 @@ Calling syntax on the command line is:
 The `query_function` is any module in `dsgrn_net_query/queries`, except for `CountStableFC_large_networks.py`. The call for that function is 
 ```bash    
     python CountStableFC_large_networks.py <networks_file> <results_directory> <params.json>
-```    
+```   
+Alternatively, one can use the `dsgrn_net_query/call_job.py` function.
+```bash
+python call_job.py <num_processes> <path_to_query_module.py> <path_to_network_file> <path_to_parameter_file> <optional_path_to_resultsdir>
+```
 
 
 See the parameter files in the `tests` folder for examples of the input argument to `call_jobs.py`. The keywords in the json parameter dictionary are given as follows.

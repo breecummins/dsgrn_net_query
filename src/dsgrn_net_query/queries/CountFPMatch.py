@@ -14,7 +14,7 @@ def query(network_file,params_file,resultsdir=""):
     are the matching conditions for an FP. For example, if there are four variables
     X1, X2, X3, X4 in the network spec, the FP (2,1,0,*) would be a match for any
     value of *.
-    :param resultsdir: optional path to directory where uniquely named results directory will be written, default is current directory
+    :param resultsdir: optional path to directory where results will be written, default is current directory
 
     :return: Writes count of parameters with an FP match to a dictionary keyed by
     network spec, which is dumped to a json file.

@@ -33,7 +33,7 @@ def query(network_file,params_file,resultsdir=""):
                     Note that an epsilon of 0.10 means that the noise level is considered to be +/- 10% of the distance
                     between global maximum and global minimum for each time series. Thus all information on curve shape
                     is lost at epsilon = 0.5. It is recommended to stay far below that level
-    :param resultsdir: optional path to directory where uniquely named results directory will be written, default is current directory
+    :param resultsdir: optional path to directory where results will be written, default is current directory
 
     :return: Writes True (pattern match for the poset) or False (no pattern match) or
         parameter count (# successful matches) plus the number of parameters for each

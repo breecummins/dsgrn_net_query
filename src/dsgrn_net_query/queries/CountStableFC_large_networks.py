@@ -10,7 +10,7 @@ def query(network_file,params_file,resultsdir=""):
     '''
     :param network_file: a .txt file containing either a single DSGRN network specification or a list of network specification strings in DSGRN format
     :param params_file: A json file with a dictionary with key "num_proc" that specifies the (integer) number of processes to use in the computations.
-    :param resultsdir: optional path to directory where uniquely named results directory will be written, default is current directory
+    :param resultsdir: optional path to directory where results will be written, default is current directory
 
     :return: Writes count of parameters with a stable FC to a dictionary keyed by
     network spec, which is dumped to a json file.
@@ -18,9 +18,6 @@ def query(network_file,params_file,resultsdir=""):
 
     networks = read_networks(network_file)
     params = json.load(open(params_file))
-    N = params["num_proc"]
-    print(networks)
-    print(N)
 
     resultsdict = {}
     for k,netspec in enumerate(networks):

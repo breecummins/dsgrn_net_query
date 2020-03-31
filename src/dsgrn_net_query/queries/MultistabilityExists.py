@@ -25,7 +25,7 @@ def query(network_file,params_file,resultsdir=""):
                     are permitted for the node type.
                     Example: {(1,2) : ["C"], (3,1) : ["0"]} means that any node with 1 in-edge and 2 out-edges must have
                     hex code 0x0C and any node with 3 in-edges and 1 outedge must have hex code 0.
-    :param resultsdir: optional path to directory where uniquely named results directory will be written, default is current directory
+    :param resultsdir: optional path to directory where results will be written, default is current directory
 
     :return: List of network specs that match all FPs in params["included_bounds"] and match none of
              the FPs in params["excluded_bounds"] for at least 1 parameter that is dumped to a json file.
