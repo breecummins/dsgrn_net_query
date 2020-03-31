@@ -3,7 +3,7 @@ import os, json,sys
 from functools import partial
 from mpi4py import MPI
 from mpi4py.futures import MPICommExecutor
-from NetworkPerturbations.queries.query_utilities import read_networks
+from dsgrn_net_query.utilities.parsers import read_networks
 
 def query(network_file,resultsdir,params_file):
     '''

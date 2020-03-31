@@ -1,10 +1,10 @@
 import DSGRN
 import os, json, sys
 from functools import partial
-import NetworkPerturbations.queries.query_utilities as qu
 from mpi4py import MPI
 from mpi4py.futures import MPICommExecutor
-from NetworkPerturbations.queries.query_utilities import read_networks
+from dsgrn_net_query.utilities.parsers import read_networks
+from dsgrn_net_query.utilities.dsgrn_utilities import satisfies_hex_constraints
 
 def query(network_file,resultsdir,params_file):
     '''
@@ -75,7 +75,7 @@ def compute_for_network_with_constraints(included_bounds,excluded_bounds,N,hex_c
     network, parametergraph = getpg(netspec)
     for p in range(parametergraph.size()):
         param = parametergraph.parameter(p)
-        if qu.satisfies_hex_constraints(param,hex_constraints) and have_match(network, param, included_bounds,excluded_bounds):
+        if satisfies_hex_constraints(param,hex_constraints) and have_match(network, param, included_bounds,excluded_bounds):
             print("Network {} of {} complete.".format(k + 1, N))
             sys.stdout.flush()
             return netspec

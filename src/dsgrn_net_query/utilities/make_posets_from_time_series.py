@@ -1,5 +1,7 @@
+import DSGRN
 from min_interval_posets import curve
 from min_interval_posets import posets as make_posets
+from dsgrn_net_query.utilities.parsers import *
 
 
 def calculate_poset(params, networks):
