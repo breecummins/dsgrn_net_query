@@ -1,0 +1,9 @@
+{
+
+                                "included_bounds" : [{"inducer1": [1, 2], "inducer2": [0, 0], "reporter": [1, 1]},
+                                                     {"inducer1": [0, 0], "inducer2": [1, 2], "reporter": [0, 0]},
+                                                      {"inducer1": [1, 2], "inducer2": [1, 2], "reporter": [0, 0]}],
+                               "excluded_bounds" : [{"inducer1": [1, 2], "inducer2": [0, 0], "reporter": [0, 0]},
+                                                     {"inducer1": [0, 0], "inducer2": [1, 2], "reporter": [1, 1]},
+                                                      {"inducer1": [1, 2], "inducer2": [1, 2], "reporter": [1, 1]}]
+}
