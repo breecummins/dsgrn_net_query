@@ -19,22 +19,23 @@ To run tests to confirm the code is working as expected, do
     pytest
 ```
 
-Calling syntax on the command line is:
-```bash    
-    mpiexec -n <num_processes> python <query_function> <networks_file> <results_directory> <params.json>
-```    
-
-The `query_function` is any module in `dsgrn_net_query/queries`, except for `CountStableFC_large_networks.py`. The call for that function is 
-```bash    
-    python CountStableFC_large_networks.py <networks_file> <results_directory> <params.json>
-```   
-Alternatively, one can use the `dsgrn_net_query/call_job.py` function.
+The recommended way to do a query is to use the `dsgrn_net_query/call_job.py` function.
 ```bash
-python call_job.py <num_processes> <path_to_query_module.py> <path_to_network_file> <path_to_parameter_file> <optional_path_to_resultsdir>
+python call_job.py <num_processes> <query_function> <networks_file> <params.json> <optional_results_directory>
+
 ```
+The `query_function` is any module in `dsgrn_net_query/queries` and the other inputs will be discussed below (see the files in the `tests` folder for examples of the input arguments to `call_jobs.py`.) The `call_job.py` function creates a unique date-time stamped folder in which to store results. It's the safest way to call a query.
+
+Alternatively, direct calls on the command line look like this (except for `CountStableFC_large_networks.py`).
+```bash    
+    mpiexec -n <num_processes> python <query_function> <networks_file> <params.json> <optional_results_directory>
+```    
+The call for `CountStableFC_large_networks.py` is 
+```bash    
+    python CountStableFC_large_networks.py <networks_file> <params.json> <optional_results_directory>
+```   
 
 
-See the parameter files in the `tests` folder for examples of the input argument to `call_jobs.py`. The keywords in the json parameter dictionary are given as follows.
 
 # Inputs 
 
