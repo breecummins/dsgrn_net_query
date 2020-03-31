@@ -3,7 +3,7 @@ import json, os, sys, ast
 from functools import partial
 from inspect import getmembers, isfunction
 from dsgrn_net_query.utilities.make_posets_from_time_series import calculate_posets_from_multiple_time_series
-from dsgrn_net_query.utilities.parsers import read_networks
+from dsgrn_net_query.utilities.file_utilities import read_networks
 from mpi4py import MPI
 from mpi4py.futures import MPICommExecutor
 

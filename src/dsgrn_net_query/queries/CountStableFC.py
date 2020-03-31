@@ -1,7 +1,7 @@
 import DSGRN
 import os, json,sys
 from functools import partial
-from dsgrn_net_query.utilities.parsers import read_networks
+from dsgrn_net_query.utilities.file_utilities import read_networks
 from mpi4py import MPI
 from mpi4py.futures import MPICommExecutor
 
