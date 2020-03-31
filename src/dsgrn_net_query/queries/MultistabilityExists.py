@@ -6,12 +6,11 @@ from mpi4py.futures import MPICommExecutor
 from dsgrn_net_query.utilities.parsers import read_networks
 from dsgrn_net_query.utilities.dsgrn_utilities import satisfies_hex_constraints
 
-def query(network_file,resultsdir,params_file):
+def query(network_file,params_file,resultsdir=""):
     '''
     Take the intersection of an arbitrary number of DSGRN fixed points in a list.
 
     :param network_file: a .txt file containing either a single DSGRN network specification or a list of network specification strings in DSGRN format
-    :param resultsdir: path to directory where results file(s) will be stored
     :param params_file: A json file with a dictionary containing the keys "included_bounds", "excluded_bounds", and optionally "hex_constraints".
                     The "bounds" variables are each a list of dictionaries of variable names common to all network
                     specifications with an associated integer range.
@@ -26,6 +25,7 @@ def query(network_file,resultsdir,params_file):
                     are permitted for the node type.
                     Example: {(1,2) : ["C"], (3,1) : ["0"]} means that any node with 1 in-edge and 2 out-edges must have
                     hex code 0x0C and any node with 3 in-edges and 1 outedge must have hex code 0.
+    :param resultsdir: optional path to directory where uniquely named results directory will be written, default is current directory
 
     :return: List of network specs that match all FPs in params["included_bounds"] and match none of
              the FPs in params["excluded_bounds"] for at least 1 parameter that is dumped to a json file.
@@ -136,13 +136,16 @@ def all_excluded(network,excluded_bounds,stable_FP_annotations):
     return True
 
 if __name__ == "__main__":
-    if len(sys.argv) < 4:
+     if len(sys.argv) < 3:
         print(
-        "Calling signature is \n " \
-        "mpiexec -n <num_processes> python MultistabilityExists.py <path_to_network_file> <path_to_results_directory> <path_to_parameter_file>"
+        "Calling signature has two required arguments \n " \
+        "mpiexec -n <num_processes> python MultistabilityExists.py <path_to_network_file> <path_to_parameter_file>"
         )
         exit(1)
-    network_file = sys.argv[1]
-    resultsdir = sys.argv[2]
-    params_file = sys.argv[3]
-    query(network_file,resultsdir,params_file)
+     network_file = sys.argv[1]
+     params_file = sys.argv[2]
+     if len(sys.argv)>3:
+        resultsdir = sys.argv[3]
+        query(network_file, params_file, resultsdir)
+     else:
+        query(network_file,params_file)

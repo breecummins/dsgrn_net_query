@@ -5,7 +5,7 @@ Path("temp_results").mkdir(exist_ok=True)
 
 
 def test_multistability():
-    command = ["mpiexec", "-n", "2", "python", "../src/dsgrn_net_query/queries/MultistabilityExists.py", "mpi_networks_ME.txt", "temp_results", "mpi_params_ME.json"]
+    command = ["mpiexec", "-n", "2", "python", "../src/dsgrn_net_query/queries/MultistabilityExists.py", "mpi_networks_ME.txt", "mpi_params_ME.json", "temp_results"]
     output_file = "temp_results/query_results.json"
     subprocess.check_call(command)
     results = json.load(open(output_file))
@@ -13,7 +13,7 @@ def test_multistability():
 
 
 def test_patternmatch():
-    command = ["mpiexec", "-n", "2", "python", "../src/dsgrn_net_query/queries/patternmatch.py", "mpi_networks_pm.txt", "temp_results", "mpi_params_pm.json"]
+    command = ["mpiexec", "-n", "2", "python", "../src/dsgrn_net_query/queries/patternmatch.py", "mpi_networks_pm.txt", "mpi_params_pm.json", "temp_results"]
     output_file1 = "temp_results/query_results_PathMatchInDomainGraph_wt1_microarray_coregenes_lifepoints_interpol_trim.json"
     output_file2 = "temp_results/query_results_PathMatchInStableFullCycle_wt1_microarray_coregenes_lifepoints_interpol_trim.json"
     output_file3 = "temp_results/query_results_PathMatchInDomainGraph_wt_rnaseq_ts.json"
@@ -31,7 +31,7 @@ def test_patternmatch():
 
 
 def test_count_stableFCln():
-    command = "python ../src/dsgrn_net_query/queries/CountStableFC_large_networks.py mpi_networks_FCln.txt temp_results mpi_params_FCln.json"
+    command = "python ../src/dsgrn_net_query/queries/CountStableFC_large_networks.py mpi_networks_FCln.txt mpi_params_FCln.json temp_results"
     output_file = "temp_results/query_results.json"
     subprocess.check_call(command,shell=True)
     results = json.load(open(output_file))
@@ -39,7 +39,7 @@ def test_count_stableFCln():
 
 
 def test_count_stableFC():
-    command = ["mpiexec", "-n", "2", "python", "../src/dsgrn_net_query/queries/CountStableFC.py", "mpi_networks_FCln.txt", "temp_results", ""]
+    command = ["mpiexec", "-n", "2", "python", "../src/dsgrn_net_query/queries/CountStableFC.py", "mpi_networks_FCln.txt", "", "temp_results"]
     output_file = "temp_results/query_results.json"
     subprocess.check_call(command)
     results = json.load(open(output_file))
@@ -47,7 +47,7 @@ def test_count_stableFC():
 
 
 def test_count_stableFP():
-    command = ["mpiexec", "-n", "2", "python", "../src/dsgrn_net_query/queries/CountFPMatch.py", "mpi_networks_FP.txt", "temp_results", "mpi_params_FP.json"]
+    command = ["mpiexec", "-n", "2", "python", "../src/dsgrn_net_query/queries/CountFPMatch.py", "mpi_networks_FP.txt", "mpi_params_FP.json", "temp_results"]
     output_file = "temp_results/query_results.json"
     subprocess.check_call(command)
     results = json.load(open(output_file))

@@ -5,11 +5,11 @@ from dsgrn_net_query.utilities.parsers import read_networks
 from mpi4py import MPI
 from mpi4py.futures import MPICommExecutor
 
-def query(network_file,resultsdir,params_file=""):
+def query(network_file,params_file="",resultsdir=""):
     '''
     :param network_file: a .txt file containing either a single DSGRN network specification or a list of network specification strings in DSGRN format
-    :param resultsdir: path to an existing directory where results file(s) will be stored
     :param params_file: An unnecessary .json file containing an empty dictionary that's here for API consistency only.
+    :param resultsdir: optional path to directory where uniquely named results directory will be written, default is current directory
 
     :return: Writes count of parameters with a stable FC to a dictionary keyed by
     network spec, which is dumped to a json file.
@@ -59,10 +59,17 @@ def check_FC(N,tup):
 if __name__ == "__main__":
     if len(sys.argv) < 3:
         print(
-        "Calling signature is \n " \
-        "mpiexec -n <num_processes> python CountStableFC.py <path_to_network_file> <path_to_results_directory>"
+            "Calling signature has one required argument \n " \
+            "mpiexec -n <num_processes> python CountStableFC.py <path_to_network_file>"
         )
         exit(1)
     network_file = sys.argv[1]
-    resultsdir = sys.argv[2]
-    query(network_file,resultsdir)
+    if len(sys.argv) > 2:
+        params_file = sys.argv[2]
+    else:
+        params_file = ""
+    if len(sys.argv) > 3:
+        resultsdir = sys.argv[3]
+    else:
+       resultsdir = ""
+    query(network_file, params_file, resultsdir)

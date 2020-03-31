@@ -24,21 +24,21 @@ Calling syntax on the command line is:
     mpiexec -n <num_processes> python <query_function> <networks_file> <results_directory> <params.json>
 ```    
 
-The `query_function`
+The `query_function` is any module in `dsgrn_net_query/queries`, except for `CountStableFC_large_networks.py`. The call for that function is 
+```bash    
+    python CountStableFC_large_networks.py <networks_file> <results_directory> <params.json>
+```    
 
 
 See the parameter files in the `tests` folder for examples of the input argument to `call_jobs.py`. The keywords in the json parameter dictionary are given as follows.
 
-# Parameters 
-__Required:__
+# Inputs 
 
-    networkfile         =   path to a file containing either a single network specification
+    networks_file         =   path to a file containing either a single DSGRN network specification
                             or a list of them (comma-separated and surrounded by square
                             brackets, saved as plain text)
 
-    numperturbations    =   Maximum number of perturbed networks to find (integer);
-                            process may time out before this number is reached. If 0,
-                            then the perturbation step is skipped. 
+    
                             
 
                                    

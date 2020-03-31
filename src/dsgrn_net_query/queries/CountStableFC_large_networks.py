@@ -6,11 +6,11 @@ from mpi4py.futures import MPICommExecutor
 import sqlite3
 
 
-def query(network_file,resultsdir,params_file):
+def query(network_file,params_file,resultsdir=""):
     '''
     :param network_file: a .txt file containing either a single DSGRN network specification or a list of network specification strings in DSGRN format
-    :param resultsdir: path to an existing directory where results file(s) will be stored
-    :param params_file: A json file with a dictionary with key "num_proc" that specifies the (integer) number of processes to be created in the multiprocessing tools.
+    :param params_file: A json file with a dictionary with key "num_proc" that specifies the (integer) number of processes to use in the computations.
+    :param resultsdir: optional path to directory where uniquely named results directory will be written, default is current directory
 
     :return: Writes count of parameters with a stable FC to a dictionary keyed by
     network spec, which is dumped to a json file.
@@ -151,13 +151,16 @@ def SaveDatabase(filename, data, pg):
 
 
 if __name__ == "__main__":
-    if len(sys.argv) < 4:
+    if len(sys.argv) < 3:
         print(
-            "Calling signature is \n " \
-            "python CountStableFC_large_networks.py <path_to_network_file> <path_to_results_directory> <path_to_parameter_file>"
+            "Calling signature has two required arguments \n " \
+            "python CountStableFC_large_networks.py <path_to_network_file> <path_to_parameter_file>"
         )
         exit(1)
     network_file = sys.argv[1]
-    resultsdir = sys.argv[2]
-    params_file = sys.argv[3]
-    query(network_file, resultsdir, params_file)
+    params_file = sys.argv[2]
+    if len(sys.argv) > 3:
+        resultsdir = sys.argv[3]
+        query(network_file, params_file, resultsdir)
+    else:
+        query(network_file, params_file)

@@ -1,5 +1,5 @@
 import pandas as pd
-import ast
+import ast,subprocess,sys,os,shutil
 
 def extractdata(filename):
     '''
@@ -69,4 +69,16 @@ def read_networks(network_object):
                 network_str = network_str[:-1]
             networks = [network_str]
     return networks
+
+
+def create_results_folder(network_file,resultsdir,params_file):
+        datetime = subprocess.check_output(['date +%Y_%m_%d_%H_%M_%S'],shell=True).decode(sys.stdout.encoding).strip()
+        dirname = os.path.join(os.path.expanduser(resultsdir),"computations"+datetime)
+        queriesdir = os.path.join(dirname,"queries"+datetime)
+        os.makedirs(queriesdir)
+        inputfilesdir = os.path.join(dirname,"inputs"+datetime)
+        os.makedirs(inputfilesdir)
+        # save input files to computations folder
+        shutil.copy(network_file,inputfilesdir)
+        shutil.copy(params_file,inputfilesdir)
 

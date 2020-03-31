@@ -8,14 +8,13 @@ from mpi4py import MPI
 from mpi4py.futures import MPICommExecutor
 
 
-def query(network_file,resultsdir,params_file):
+def query(network_file,params_file,resultsdir=""):
     '''
     For each epsilon in a list of epsilons, a poset from time series data is created or accessed from the params dictionary.
     This poset is matched against the domain graph for each parameter in each network from a list of networks.
     The result is True if there is at least one match, False if not, or a count of the number of parameters with a match.
 
     :param network_file: a .txt file containing either a single DSGRN network specification or a list of network specification strings in DSGRN format
-    :param resultsdir: path to an existing directory where results file(s) will be stored
     :param params_file: A .json file containing a dictionary with the keys
         "matchingfunction" : a string or list of strings containing the name(s) of one of the matching functions in this module
         **NOTE** Cycle matches are not recommended. They will not work unless, for each variable, the first and last extrema have the same label.
@@ -34,6 +33,7 @@ def query(network_file,resultsdir,params_file):
                     Note that an epsilon of 0.10 means that the noise level is considered to be +/- 10% of the distance
                     between global maximum and global minimum for each time series. Thus all information on curve shape
                     is lost at epsilon = 0.5. It is recommended to stay far below that level
+    :param resultsdir: optional path to directory where uniquely named results directory will be written, default is current directory
 
     :return: Writes True (pattern match for the poset) or False (no pattern match) or
         parameter count (# successful matches) plus the number of parameters for each
@@ -218,13 +218,16 @@ def PathMatchInStableFullCycle(paramgraph, patterngraph, count):
 
 
 if __name__ == "__main__":
-    if len(sys.argv) < 4:
+    if len(sys.argv) < 3:
         print(
-        "Calling signature is \n " \
-        "mpiexec -n <num_processes> python patternmatch.py <path_to_network_file> <path_to_results_directory> <path_to_parameter_file>"
+        "Calling signature has two required arguments \n " \
+        "mpiexec -n <num_processes> python patternmatch.py <path_to_network_file> <path_to_parameter_file>"
         )
         exit(1)
     network_file = sys.argv[1]
-    resultsdir = sys.argv[2]
-    params_file = sys.argv[3]
-    query(network_file,resultsdir,params_file)
+    params_file = sys.argv[2]
+    if len(sys.argv)>3:
+        resultsdir = sys.argv[3]
+        query(network_file, params_file, resultsdir)
+    else:
+        query(network_file,params_file)

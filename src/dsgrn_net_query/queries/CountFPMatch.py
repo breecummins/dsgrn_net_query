@@ -5,16 +5,16 @@ from mpi4py import MPI
 from mpi4py.futures import MPICommExecutor
 from dsgrn_net_query.utilities.parsers import read_networks
 
-def query(network_file,resultsdir,params_file):
+def query(network_file,params_file,resultsdir=""):
     '''
     :param network_file: a .txt file containing either a single DSGRN network specification or a list of network specification strings in DSGRN format
-    :param resultsdir: path to directory where results file(s) will be stored
     :param params_file: A json file with a dictionary containing the key "bounds". bounds is a dictionary
     of variable names common to all network specifications with a range of values
     assigned to each. Example: {"X1":[2,2],"X2":[1,1],"X3":[0,1]}. The integer ranges
     are the matching conditions for an FP. For example, if there are four variables
     X1, X2, X3, X4 in the network spec, the FP (2,1,0,*) would be a match for any
     value of *.
+    :param resultsdir: optional path to directory where uniquely named results directory will be written, default is current directory
 
     :return: Writes count of parameters with an FP match to a dictionary keyed by
     network spec, which is dumped to a json file.
@@ -72,13 +72,16 @@ def record_results(results,resultsdir):
 
 
 if __name__ == "__main__":
-    if len(sys.argv) < 4:
+    if len(sys.argv) < 3:
         print(
-        "Calling signature is \n " \
-        "mpiexec -n <num_processes> python CountFPMatch.py <path_to_network_file> <path_to_results_directory> <path_to_parameter_file>"
+            "Calling signature has two required arguments \n " \
+            "mpiexec -n <num_processes> python CountFPMatch.py <path_to_network_file> <path_to_parameter_file>"
         )
         exit(1)
     network_file = sys.argv[1]
-    resultsdir = sys.argv[2]
-    params_file = sys.argv[3]
-    query(network_file,resultsdir,params_file)
+    params_file = sys.argv[2]
+    if len(sys.argv) > 3:
+        resultsdir = sys.argv[3]
+        query(network_file, params_file, resultsdir)
+    else:
+        query(network_file, params_file)
