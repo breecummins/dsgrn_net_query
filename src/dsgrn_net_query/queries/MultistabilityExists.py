@@ -70,6 +70,8 @@ def compute_for_network_without_constraints(included_bounds,excluded_bounds,coun
             if count:
                 numparams +=1
             else:
+                print("Network {} of {} complete.".format(k + 1, N))
+                sys.stdout.flush()
                 return (netspec,(True, parametergraph.size()))
     print("Network {} of {} complete.".format(k + 1, N))
     sys.stdout.flush()
@@ -92,6 +94,8 @@ def compute_for_network_with_constraints(included_bounds,excluded_bounds,count,N
                 if count:
                     numparams+=1
                 else:
+                    print("Network {} of {} complete.".format(k + 1, N))
+                    sys.stdout.flush()
                     return (netspec,(True, parametergraph.size()))
     print("Network {} of {} complete.".format(k + 1, N))
     sys.stdout.flush()

@@ -60,8 +60,16 @@ def test_count_stableFP():
     output_file = "temp_results/query_results.json"
     results = json.load(open(output_file))
     assert(results == {'X1 : (X1)(~X3) : E\nX2 : (~X1) : E\nX3 : (X1 + X2) : E\n': [16, 168], 'X1 : (X1)(~X3) : E\nX2 : (X1) : E\nX3 : (X1 + X2) : E\n': [8, 168], 'X1 : (X1 + X2) : E\nX2 : (~X3) : E\nX3 : (X2) : E\n': [0, 4]})
+    
+
+def test_stableFP2():
+    command = ["mpiexec", "-n", "2", "python", "../src/dsgrn_net_query/queries/CountFPMatch.py", "mpi_networks_FP.txt", "mpi_params_FP2.json", "temp_results"]
+    subprocess.check_call(command)
+    output_file = "temp_results/query_results.json"
+    results = json.load(open(output_file))
+    assert(results == {'X1 : (X1)(~X3) : E\nX2 : (~X1) : E\nX3 : (X1 + X2) : E\n': [True, 168], 'X1 : (X1)(~X3) : E\nX2 : (X1) : E\nX3 : (X1 + X2) : E\n': [True, 168], 'X1 : (X1 + X2) : E\nX2 : (~X3) : E\nX3 : (X2) : E\n': [False, 4]})
     subprocess.call(["rm","-r", "temp_results/"])
 
 
 if __name__ == "__main__":
-    test_multistability()
+    test_count_stableFP()

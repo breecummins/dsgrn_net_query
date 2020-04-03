@@ -8,12 +8,13 @@ from dsgrn_net_query.utilities.file_utilities import read_networks
 def query(network_file,params_file,resultsdir=""):
     '''
     :param network_file: a .txt file containing either a single DSGRN network specification or a list of network specification strings in DSGRN format
-    :param params_file: A json file with a dictionary containing the key "bounds". bounds is a dictionary
-    of variable names common to all network specifications with a range of values
-    assigned to each. Example: {"X1":[2,2],"X2":[1,1],"X3":[0,1]}. The integer ranges
-    are the matching conditions for an FP. For example, if there are four variables
-    X1, X2, X3, X4 in the network spec, the FP (2,1,0,*) would be a match for any
-    value of *.
+    :param params_file: A json file with a dictionary containing the keys "count" and "bounds".
+        "bounds" is a dictionary of variable names common to all network specifications with a range of values
+            assigned to each. Example: {"X1":[2,2],"X2":[1,1],"X3":[0,1]}. The integer ranges
+            are the matching conditions for an FP. For example, if there are four variables
+            X1, X2, X3, X4 in the network spec, the FP (2,1,0,*) would be a match for any value of *.
+        "count" : True or False (true or false in .json format);
+                whether to count all parameters with a match or shortcut at first success
     :param resultsdir: optional path to directory where results will be written, default is current directory
 
     :return: Writes count of parameters with an FP match to a dictionary keyed by
@@ -24,8 +25,9 @@ def query(network_file,params_file,resultsdir=""):
     params = json.load(open(params_file))
 
     bounds = params["bounds"]
+    count = params["count"]
 
-    work_function = partial(check_FP, bounds, len(networks))
+    work_function = partial(check_FP, bounds, count, len(networks))
     with MPICommExecutor(MPI.COMM_WORLD, root=0) as executor:
         if executor is not None:
             print("Querying networks.")
@@ -51,9 +53,9 @@ def is_FP_match(bounds_ind, annotation):
            for k in bounds_ind)
 
 
-def check_FP(bounds,N,tup):
+def check_FP(bounds,count,N,tup):
     (k, netspec) = tup
-    count = 0
+    numparams = 0
     network = DSGRN.Network(netspec)
     bounds_ind = {network.index(str(k)): bounds[k] for k in bounds}
     parametergraph = DSGRN.ParameterGraph(network)
@@ -65,10 +67,18 @@ def check_FP(bounds,N,tup):
         stable_FP_annotations = [mg.annotation(i)[0] for i in range(0, mg.poset().size())
                                  if is_FP(mg.annotation(i)[0]) and len(mg.poset().children(i)) == 0]
         if any([is_FP_match(bounds_ind,a) for a in stable_FP_annotations]):
-            count+=1
+            if count:
+                numparams+=1
+            else:
+                print("Network {} of {} complete.".format(k + 1, N))
+                sys.stdout.flush()
+                return netspec, [True, parametergraph.size()]
     print("Network {} of {} complete.".format(k + 1, N))
     sys.stdout.flush()
-    return netspec,[count,parametergraph.size()]
+    if count:
+        return netspec,[numparams,parametergraph.size()]
+    else:
+        return netspec, [False, parametergraph.size()]
 
 
 if __name__ == "__main__":
