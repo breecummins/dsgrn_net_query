@@ -66,7 +66,9 @@ This can be imported as a Python dictionary using
 import json
 results = json.load(open("query_results.json"))
 ``` 
-The keys are the DSGRN network specifications, and the values are usually `[#_matches, param_graph_size]`. However, the module `patternmatch.py` can save multiple files depending how many searches are indicated by the user. The example: `query_results_PathMatchInDomainGraph_wt_rnaseq_ts.json` indicates that queries were performed using the subroutine `PathMatchInDomainGraph` using the timeseries file `wt_rnaseq_ts.csv`. Both `.csv` and `.tsv` file types are acceptable. The file itself contains a list of results:
+The keys are the DSGRN network specifications, and the values are usually `[# matches, param_graph_size]`, if `count = true`, and `[true_or_false, param_graph_size]`, if `count = false`. 
+
+However, the module `patternmatch.py` can save multiple files depending how many searches are indicated by the user. The example: `query_results_PathMatchInDomainGraph_wt_rnaseq_ts.json` indicates that queries were performed using the subroutine `PathMatchInDomainGraph` using the timeseries file `wt_rnaseq_ts.csv`. Both `.csv` and `.tsv` file types are acceptable. The file itself contains a list of results:
 ```
 [(epsilon_1, # matches, param_graph_size), (epsilon_2, # matches, param_graph_size), ... ] 
 ``` 
@@ -75,6 +77,7 @@ If the subroutine `PathMatchInStableFullCycle` is specified, then the results ar
 [(epsilon_1, # matches, # stable full cycles, param_graph_size),   
  (epsilon_2, # matches, # stable full cycles, param_graph_size), ... ] 
 ``` 
+Again, `# matches` will be `true_or_false` if `count` is set to `false`.
 
 # Customizing 
 

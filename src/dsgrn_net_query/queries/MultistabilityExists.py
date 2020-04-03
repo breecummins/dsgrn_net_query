@@ -11,13 +11,15 @@ def query(network_file,params_file,resultsdir=""):
     Take the intersection of an arbitrary number of DSGRN fixed points in a list.
 
     :param network_file: a .txt file containing either a single DSGRN network specification or a list of network specification strings in DSGRN format
-    :param params_file: A json file with a dictionary containing the keys "included_bounds", "excluded_bounds", and optionally "hex_constraints".
+    :param params_file: A json file with a dictionary containing the keys "included_bounds", "excluded_bounds", "count", and optionally "hex_constraints".
                     The "bounds" variables are each a list of dictionaries of variable names common to all network
                     specifications with an associated integer range.
                     Example: [{"X1":[2,2],"X2":[1,1],"X3":[0,1]},{"X1":[0,1],"X2":[1,1],"X3":[2,3]}]
                     The integer ranges are the matching conditions for an FP.
                     For example, if there are four variablesm X1, X2, X3, X4 in the network spec,
                     the FP (2,1,0,*) would be a match to the first fixed point for any value of *.
+                    "count" : True or False (true or false in .json format);
+                    whether to count all parameters with a match or shortcut at first success
                     The optional key "hex_constraints" is a dictionary of lists keying a tuple of two integers to a list
                     of hex numbers.
                     The tuple key describes the node type: (num inedges, num outedges) and the list contains the
@@ -37,16 +39,18 @@ def query(network_file,params_file,resultsdir=""):
 
     included_bounds = [dict(b) for b in params["included_bounds"]]
     excluded_bounds = [dict(b) for b in params["excluded_bounds"]]
+    count = params["count"]
+
     if "hex_constraints" in params and params["hex_constraints"]:
         hex_constraints = dict(params["hex_constraints"])
-        work_function = partial(compute_for_network_with_constraints, included_bounds, excluded_bounds, len(networks), hex_constraints)
+        work_function = partial(compute_for_network_with_constraints, included_bounds, excluded_bounds, count, len(networks), hex_constraints)
     else:
-        work_function = partial(compute_for_network_without_constraints, included_bounds, excluded_bounds, len(networks))
+        work_function = partial(compute_for_network_without_constraints, included_bounds, excluded_bounds, count, len(networks))
     with MPICommExecutor(MPI.COMM_WORLD, root=0) as executor:
         if executor is not None:
             print("Querying networks.")
             output=list(executor.map(work_function, enumerate(networks)))
-            results = list(filter(None, output))
+            results = dict(output)
             record_results(results,resultsdir)
 
 
@@ -57,31 +61,45 @@ def record_results(results,resultsdir):
     json.dump(results,open(rname,'w'))
 
 
-def compute_for_network_without_constraints(included_bounds,excluded_bounds,N,tup):
+def compute_for_network_without_constraints(included_bounds,excluded_bounds,count,N,tup):
     (k, netspec) = tup
     network, parametergraph = getpg(netspec)
+    numparams = 0
     for p in range(parametergraph.size()):
         if have_match(network, parametergraph.parameter(p), included_bounds, excluded_bounds):
-            print("Network {} of {} complete.".format(k + 1, N))
-            sys.stdout.flush()
-            return netspec
+            if count:
+                numparams +=1
+            else:
+                return (netspec,(True, parametergraph.size()))
     print("Network {} of {} complete.".format(k + 1, N))
     sys.stdout.flush()
-    return None
+    if count:
+        return netspec,(numparams,parametergraph.size())
+    else:
+        return netspec,(False,parametergraph.size())
 
 
-def compute_for_network_with_constraints(included_bounds,excluded_bounds,N,hex_constraints,tup):
+def compute_for_network_with_constraints(included_bounds,excluded_bounds,count,N,hex_constraints,tup):
     (k, netspec) = tup
     network, parametergraph = getpg(netspec)
+    numparams = 0
+    num_with_hex = 0
     for p in range(parametergraph.size()):
         param = parametergraph.parameter(p)
-        if satisfies_hex_constraints(param,hex_constraints) and have_match(network, param, included_bounds,excluded_bounds):
-            print("Network {} of {} complete.".format(k + 1, N))
-            sys.stdout.flush()
-            return netspec
+        if satisfies_hex_constraints(param,hex_constraints):
+            num_with_hex += 1
+            if have_match(network, param, included_bounds,excluded_bounds):
+                if count:
+                    numparams+=1
+                else:
+                    return (netspec,(True, parametergraph.size()))
     print("Network {} of {} complete.".format(k + 1, N))
     sys.stdout.flush()
-    return None
+    if count:
+        return netspec,(numparams,num_with_hex,parametergraph.size())
+    else:
+        return netspec,(False,parametergraph.size())
+
 
 
 def getpg(netspec):

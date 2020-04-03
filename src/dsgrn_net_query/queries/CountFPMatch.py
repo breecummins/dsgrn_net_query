@@ -34,6 +34,13 @@ def query(network_file,params_file,resultsdir=""):
             record_results(results,resultsdir)
 
 
+def record_results(results,resultsdir):
+    rname = os.path.join(resultsdir,"query_results.json")
+    if os.path.exists(rname):
+        os.rename(rname,rname+".old")
+    json.dump(results,open(rname,'w'))
+
+
 def is_FP(annotation):
     return annotation.startswith("FP")
 
@@ -62,13 +69,6 @@ def check_FP(bounds,N,tup):
     print("Network {} of {} complete.".format(k + 1, N))
     sys.stdout.flush()
     return netspec,[count,parametergraph.size()]
-
-
-def record_results(results,resultsdir):
-    rname = os.path.join(resultsdir,"query_results.json")
-    if os.path.exists(rname):
-        os.rename(rname,rname+".old")
-    json.dump(results,open(rname,'w'))
 
 
 if __name__ == "__main__":
