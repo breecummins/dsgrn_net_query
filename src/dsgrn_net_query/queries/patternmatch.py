@@ -1,7 +1,6 @@
 import DSGRN
 import json, os, sys, ast
 from functools import partial
-from inspect import getmembers, isfunction
 from dsgrn_net_query.utilities.make_posets_from_time_series import calculate_posets_from_multiple_time_series
 from dsgrn_net_query.utilities.file_utilities import read_networks
 from mpi4py import MPI
@@ -56,7 +55,6 @@ def query(network_file,params_file,resultsdir=""):
             sort_names = tuple(sorted(list(names)))
             params["timeseriesfname"] = "no_time_series_file"
             posets[sort_names] = {"no_time_series_file" : pos}
-    extract_queries(params)
     work_function = partial(search_over_networks, params, posets,len(networks))
     with MPICommExecutor(MPI.COMM_WORLD, root=0) as executor:
         if executor is not None:
@@ -66,155 +64,150 @@ def query(network_file,params_file,resultsdir=""):
             record_results(results,resultsdir,params)
 
 
-def record_results(results,resultsdir,params):
-    if results:
-        for name in results[next(iter(results.keys()))]:
-            reparse = dict((k, []) for k in results.keys())
-            for netspec in results.keys():
-                reparse[netspec] = results[netspec][name]
-            rname = os.path.join(resultsdir,"query_results_{}_{}.json".format(name[0],name[1].split(".")[0]))
-            if os.path.exists(rname):
-                os.rename(rname,rname+".old")
-            json.dump(reparse,open(rname,'w'))
-    else:
-        tsf = params["timeseriesfname"]
-        if isinstance(tsf,str):
-            tsf = [tsf]
-        for name in params["matchingfunction"]:
-            for ts in tsf:
-                rname = os.path.join(resultsdir, "query_results_{}_{}.json".format(name,ts.split(".")[0]))
-                if os.path.exists(rname):
-                    os.rename(rname, rname + ".old")
-                json.dump(results, open(rname, 'w'))
-
-
-def extract_queries(params):
-    pmf = params['matchingfunction']
-    matchingnames = [pmf] if isinstance(pmf,str) else pmf
-    funcs = dict([o for o in getmembers(sys.modules[__name__]) if isfunction(o[1])])
-    not_implemented = set(matchingnames).difference([o for o in funcs])
-    if not_implemented:
-        raise ValueError(
-            "\nMatching function(s) {} not implemented in patternmatch.py.\n".format(not_implemented))
-    params['matchingfunction'] = dict([o for o in funcs.items() if o[0] in matchingnames])
-
-
 def search_over_networks(params,posets,N,enum_netspec):
     (k,netspec) = enum_netspec
-    matchingfuncs = params["matchingfunction"]
+    domain = params["domain"]
+    stablefc = params["stablefc"]
     network = DSGRN.Network(netspec)
     names = tuple(sorted([network.name(k) for k in range(network.size())]))
-    ER = dict([((k,ts),[]) for k in matchingfuncs.keys() for ts in posets[names]])
-    for tsfile,pos_list in posets[names].items():
-        for (eps, (events, event_ordering)) in pos_list:
-            paramgraph, patterngraph = getGraphs(events, event_ordering, network)
-            for name,mf in matchingfuncs.items():
-                R = mf(paramgraph, patterngraph, params['count'])
-                if name == "PathMatchInStableFullCycle" and params["count"]:
-                    ER[(name,tsfile)].append((eps, R[0], R[1], paramgraph.size()))
-                else:
-                    ER[(name,tsfile)].append((eps, R, paramgraph.size()))
+    newposets = posets[names]
+    ER = {}
+    if params["count"]:
+        dmatches, fcmatches = PathMatches_with_count(network,newposets,domain,stablefc)
+    else:
+        dmatches, fcmatches = PathMatches_without_count(network,newposets,domain,stablefc)
+    if domain:
+        ER["domain"]= dmatches
+    if stablefc:
+        ER["stablefc"]= fcmatches
     print("Network {} of {} complete.".format(k+1,N))
+    sys.stdout.flush()
     return (netspec, ER)
 
 
-def getGraphs(events,event_ordering,network):
-    '''
-    Make pattern graph and parameter graph for the network and poset.
-    '''
-    poe = DSGRN.PosetOfExtrema(network,events,event_ordering)
-    patterngraph = DSGRN.PatternGraph(poe)
-    paramgraph = DSGRN.ParameterGraph(network)
-    return paramgraph,patterngraph
+def record_results(results,resultsdir,params):
 
+    def savefile(rname,rdict):
+        if os.path.exists(rname):
+            os.rename(rname, rname + ".old")
+        json.dump(rdict, open(rname, 'w'))
 
-def CycleMatchInStableMorseSet(paramgraph, patterngraph, count):
-    '''
-    Search for cycle matches in stable Morse sets only.
-    :return: Integer count of parameters if count = True; if count = False return True if at least one match, False otherwise.
-    '''
-    # TODO: In order for cycle matches to work correctly, the last extremum on each time series with an even number of extrema must be removed
-    numparams = 0
-    for paramind in range(paramgraph.size()):
-        domaingraph = DSGRN.DomainGraph(paramgraph.parameter(paramind))
-        morsedecomposition = DSGRN.MorseDecomposition(domaingraph.digraph())
-        morsegraph = DSGRN.MorseGraph(domaingraph,morsedecomposition)
-        for i in range(0,morsedecomposition.poset().size()):
-             if morsegraph.annotation(i)[0] in ["FC", "XC"] and len(morsedecomposition.poset().children(i)) == 0:
-                searchgraph = DSGRN.SearchGraph(domaingraph,i)
-                matchinggraph = DSGRN.MatchingGraph(searchgraph,patterngraph)
-                if DSGRN.CycleMatch(matchinggraph):
-                    if count:
-                        numparams +=1
-                        break
+    reparse = {}
+
+    for netspec,ER in results.items():
+        for search,tsdict in ER.items():
+            if params[search]:
+                for ts, rlist in tsdict.items():
+                    key = (search,ts)
+                    if key in reparse:
+                        reparse[key].append((netspec,rlist))
                     else:
-                        return True
-    return numparams if count else False
+                        reparse[key] = [(netspec,rlist)]
+    for key,list_of_tup in reparse.items():
+        rname = os.path.join(resultsdir, "query_results_{}_{}.json".format(key[0], key[1].split(".")[0]))
+        savefile(rname,dict(list_of_tup))
 
 
-def CycleMatchInDomainGraph(paramgraph, patterngraph, count):
-    '''
-    Search for cycle matches anywhere in the domain graph.
-    :return: Integer count of parameters if count = True; if count = False return True if at least one match, False otherwise.
-    '''
-    # TODO: In order for cycle matches to work correctly, the last extremum on each time series with an even number of extrema must be removed
-    numparams = 0
-    for paramind in range(paramgraph.size()):
-        domaingraph = DSGRN.DomainGraph(paramgraph.parameter(paramind))
-        searchgraph = DSGRN.SearchGraph(domaingraph)
-        matchinggraph = DSGRN.MatchingGraph(searchgraph, patterngraph)
-        if DSGRN.CycleMatch(matchinggraph):
-            if count:
-                numparams += 1
-            else:
-                return True
-    return numparams if count else False
-
-
-def PathMatchInDomainGraph(paramgraph, patterngraph, count):
+def PathMatches_with_count(network, posets, domain, stablefc):
     '''
     Search for path matches anywhere in the domain graph.
     :return: Integer count of parameters if count = True; if count = False return True if at least one match, False otherwise.
     '''
-    numparams = 0
-    for paramind in range(paramgraph.size()):
-        domaingraph = DSGRN.DomainGraph(paramgraph.parameter(paramind))
-        searchgraph = DSGRN.SearchGraph(domaingraph)
-        matchinggraph = DSGRN.MatchingGraph(searchgraph, patterngraph)
-        if DSGRN.PathMatch(matchinggraph):
-            if count:
-                numparams += 1
-            else:
-                return True
-    return numparams if count else False
-
-
-def PathMatchInStableFullCycle(paramgraph, patterngraph, count):
-    '''
-    Search for path matches in stable full cycles only.
-    :return: Integer count of parameters if count = True; if count = False return True if at least one match, False otherwise.
-    '''
-    numparams = 0
+    totalDom= {"all": {str(eps[0]) : set() for eps in posets[next(iter(posets))]} }
+    totalFC = {"all": {str(eps[0]) : set() for eps in posets[next(iter(posets))]} }
+    numDomMatch = { tsfile : {str(eps[0]) : 0 for eps in poset_list} for tsfile,poset_list in posets.items()}
+    numFCMatch = { tsfile : {str(eps[0]) : 0 for eps in poset_list} for tsfile,poset_list in posets.items()}
     numFC = 0
+    paramgraph = DSGRN.ParameterGraph(network)
     for paramind in range(paramgraph.size()):
         FC = False
         domaingraph = DSGRN.DomainGraph(paramgraph.parameter(paramind))
-        morsedecomposition = DSGRN.MorseDecomposition(domaingraph.digraph())
-        morsegraph = DSGRN.MorseGraph(domaingraph,morsedecomposition)
-        for i in range(0,morsedecomposition.poset().size()):
-             if morsegraph.annotation(i)[0]  == "FC" and len(morsedecomposition.poset().children(i)) == 0:
-                if not FC:
-                    numFC += 1
-                    FC = True
-                searchgraph = DSGRN.SearchGraph(domaingraph,i)
-                matchinggraph = DSGRN.MatchingGraph(searchgraph,patterngraph)
-                if DSGRN.PathMatch(matchinggraph):
-                    if count:
-                        numparams +=1
-                        break
-                    else:
-                        return True
-    return (numparams,numFC) if count else False
+        for tsfile, poset_list in posets.items():
+            for (eps, (events, event_ordering)) in poset_list:
+                patterngraph = DSGRN.PatternGraph(DSGRN.PosetOfExtrema(network,events,event_ordering))
+                if domain:
+                    dommatch = domain_check(domaingraph,patterngraph)
+                    if dommatch:
+                        numDomMatch[tsfile][str(eps)]+=1
+                        totalDom["all"][str(eps)].add(paramind)
+                if stablefc:
+                    stabmatch, newFC = stableFC_check(domaingraph,patterngraph)
+                    if newFC and not FC:
+                        numFC +=1
+                        FC = True
+                    if stabmatch:
+                        numFCMatch[tsfile][str(eps)]+=1
+                        totalFC["all"][str(eps)].add(paramind)
+    dommatches = {"all": [(float(eps),len(totalDom["all"][eps]),paramgraph.size()) for eps in totalDom["all"]]}
+    dommatches.update({tsfile : [(float(eps),count,paramgraph.size()) for eps,count in edict.items()] for tsfile,edict in numDomMatch.items()})
+    fcmatches = {"all" : [(float(eps),len(totalFC["all"][eps]),numFC,paramgraph.size()) for eps in totalFC["all"]]}
+    fcmatches.update({tsfile : [(float(eps),count,numFC,paramgraph.size()) for eps,count in edict.items()] for tsfile,edict in numFCMatch.items()})
+    return dommatches,fcmatches
+
+
+def PathMatches_without_count(network, posets, domain, stablefc):
+    '''
+    Search for path matches anywhere in the domain graph.
+    :return: Integer count of parameters if count = True; if count = False return True if at least one match, False otherwise.
+    '''
+
+    def format(numDomMatch,numFCMatch):
+        dommatches = {tsfile: [(float(eps), b, paramgraph.size()) for eps, b in edict.items()] for tsfile, edict in
+             numDomMatch.items()}
+        fcmatches = {tsfile: [(float(eps), b, paramgraph.size()) for eps, b in edict.items()] for tsfile, edict
+             in numFCMatch.items()}
+        return dommatches, fcmatches
+
+
+    numDomMatch = { tsfile : {str(eps[0]) : False for eps in poset_list} for tsfile,poset_list in posets.items()}
+    numFCMatch = { tsfile : {str(eps[0]) : False for eps in poset_list} for tsfile,poset_list in posets.items()}
+    paramgraph = DSGRN.ParameterGraph(network)
+    for paramind in range(paramgraph.size()):
+        domaingraph = DSGRN.DomainGraph(paramgraph.parameter(paramind))
+        for tsfile, poset_list in posets.items():
+            for (eps, (events, event_ordering)) in poset_list:
+                patterngraph = DSGRN.PatternGraph(DSGRN.PosetOfExtrema(network,events,event_ordering))
+                if domain and not numDomMatch[tsfile][str(eps)]:
+                    dommatch = domain_check(domaingraph,patterngraph)
+                    if dommatch:
+                        numDomMatch[tsfile][str(eps)] = True
+                if stablefc and not numFCMatch[tsfile][str(eps)]:
+                    stabmatch, newFC = stableFC_check(domaingraph,patterngraph)
+                    if stabmatch:
+                        numFCMatch[tsfile][str(eps)] = True
+        b = True
+        for tsfile,poset_list in posets.items():
+            b = bool(b*all([numDomMatch[tsfile][str(eps[0])] for eps in poset_list]))
+            b = bool(b*all([numFCMatch[tsfile][str(eps[0])] for eps in poset_list]))
+        if b:
+            return format(numDomMatch,numFCMatch)
+    return format(numDomMatch,numFCMatch)
+
+
+def domain_check(domaingraph,patterngraph):
+    ismatch = False
+    searchgraph = DSGRN.SearchGraph(domaingraph)
+    matchinggraph = DSGRN.MatchingGraph(searchgraph, patterngraph)
+    if DSGRN.PathMatch(matchinggraph):
+        ismatch = True
+    return ismatch
+
+
+def stableFC_check(domaingraph,patterngraph):
+    FC = False
+    ismatch = False
+    morsedecomposition = DSGRN.MorseDecomposition(domaingraph.digraph())
+    morsegraph = DSGRN.MorseGraph(domaingraph, morsedecomposition)
+    for i in range(0, morsedecomposition.poset().size()):
+        if morsegraph.annotation(i)[0] == "FC" and len(morsedecomposition.poset().children(i)) == 0:
+            FC = True
+            searchgraph = DSGRN.SearchGraph(domaingraph, i)
+            matchinggraph = DSGRN.MatchingGraph(searchgraph, patterngraph)
+            if DSGRN.PathMatch(matchinggraph):
+                ismatch = True
+                break
+    return ismatch,FC
+
 
 
 if __name__ == "__main__":
