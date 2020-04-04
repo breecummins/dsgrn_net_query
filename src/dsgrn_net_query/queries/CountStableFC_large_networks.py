@@ -9,7 +9,10 @@ import sqlite3
 def query(network_file,params_file,resultsdir=""):
     '''
     :param network_file: a .txt file containing either a single DSGRN network specification or a list of network specification strings in DSGRN format
-    :param params_file: A json file with an empty dictionary (here for uniform API)
+    :param params_file: A json file with the keys
+            "num_proc" = number of processes to use for each database creation
+            "count" = True or False (true or false in .json format)
+                        whether or not to return the number of matches (True) or just whether or not there is at least one match (False)
     :param resultsdir: optional path to directory where results will be written, default is current directory
 
     :return: Writes count of parameters with a stable FC to a dictionary keyed by
@@ -19,6 +22,7 @@ def query(network_file,params_file,resultsdir=""):
     networks = read_networks(network_file)
     params = json.load(open(params_file))
     num_proc = params["num_proc"]
+    count = params["count"]
 
     resultsdict = {}
     for k,netspec in enumerate(networks):
@@ -31,7 +35,10 @@ def query(network_file,params_file,resultsdir=""):
         db = DSGRN.Database(dbfile)
         N = db.parametergraph.size()
         matches = len(DSGRN.StableFCQuery(db).matches())
-        resultsdict[netspec] = (matches,N)
+        if count:
+            resultsdict[netspec] = (matches,N)
+        else:
+            resultsdict[netspec] = (matches > 0, N)
         subprocess.call(["rm",netfile])
         subprocess.call(["rm",dbfile])
         print("Network {} of {} complete".format(k + 1, len(networks)))

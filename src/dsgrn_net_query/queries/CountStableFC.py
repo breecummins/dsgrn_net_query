@@ -8,7 +8,9 @@ from mpi4py.futures import MPICommExecutor
 def query(network_file,params_file="",resultsdir=""):
     '''
     :param network_file: a .txt file containing either a single DSGRN network specification or a list of network specification strings in DSGRN format
-    :param params_file: A .json file containing an empty dictionary (here for API consistency only).
+    :param params_file: A json file with the key
+            "count" = True or False (true or false in .json format)
+                        whether or not to return the number of matches (True) or just whether or not there is at least one match (False)
     :param resultsdir: optional path to directory where results will be written, default is current directory
 
     :return: Writes count of parameters with a stable FC to a dictionary keyed by
@@ -16,8 +18,10 @@ def query(network_file,params_file="",resultsdir=""):
     '''
 
     networks = read_networks(network_file)
+    params = json.load(open(params_file))
+    count = params["count"]
 
-    work_function = partial(check_FC, len(networks))
+    work_function = partial(check_FC, count, len(networks))
     with MPICommExecutor(MPI.COMM_WORLD, root=0) as executor:
         if executor is not None:
             print("Querying networks.")
@@ -39,9 +43,9 @@ def is_FC(annotation):
     return annotation.startswith("FC")
 
 
-def check_FC(N,tup):
+def check_FC(count,N,tup):
     k,netspec = tup
-    count = 0
+    numparams = 0
     network = DSGRN.Network(netspec)
     parametergraph = DSGRN.ParameterGraph(network)
     for p in range(parametergraph.size()):
@@ -51,11 +55,18 @@ def check_FC(N,tup):
         mg = DSGRN.MorseGraph(dg, md)
         stable_FC_annotations = [mg.annotation(i)[0] for i in range(0, mg.poset().size())
                                  if is_FC(mg.annotation(i)[0]) and len(mg.poset().children(i)) == 0]
-        if len(stable_FC_annotations) > 0:
-            count+=1
+        if count and len(stable_FC_annotations) > 0:
+            numparams+=1
+        elif len(stable_FC_annotations) > 0:
+            print("Network {} of {} complete".format(k + 1, N))
+            sys.stdout.flush()
+            return netspec,(True,parametergraph.size())
     print("Network {} of {} complete".format(k+1, N))
     sys.stdout.flush()
-    return netspec,(count,parametergraph.size())
+    if count:
+        return netspec,(numparams,parametergraph.size())
+    else:
+        return netspec, (False, parametergraph.size())
 
 
 if __name__ == "__main__":
