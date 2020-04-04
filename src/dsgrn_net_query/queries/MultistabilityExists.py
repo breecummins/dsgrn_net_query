@@ -3,7 +3,7 @@ import os, json, sys
 from functools import partial
 from mpi4py import MPI
 from mpi4py.futures import MPICommExecutor
-from dsgrn_net_query.utilities.file_utilities import read_networks
+from dsgrn_net_query.utilities.file_utilities import read_networks, create_results_folder
 from dsgrn_net_query.utilities.dsgrn_utilities import satisfies_hex_constraints
 
 def query(network_file,params_file,resultsdir=""):
@@ -51,14 +51,16 @@ def query(network_file,params_file,resultsdir=""):
             print("Querying networks.")
             output=list(executor.map(work_function, enumerate(networks)))
             results = dict(output)
-            record_results(results,resultsdir)
+            record_results(network_file, params_file,results,resultsdir)
 
 
-def record_results(results,resultsdir):
+def record_results(network_file, params_file,results,resultsdir):
+    resultsdir = create_results_folder(network_file, params_file, resultsdir)
     rname = os.path.join(resultsdir,"query_results.json")
     if os.path.exists(rname):
         os.rename(rname,rname+".old")
     json.dump(results,open(rname,'w'))
+    print(resultsdir)
 
 
 def compute_for_network_without_constraints(included_bounds,excluded_bounds,count,N,tup):

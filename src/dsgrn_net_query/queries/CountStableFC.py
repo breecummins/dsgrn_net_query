@@ -1,14 +1,14 @@
 import DSGRN
 import os, json,sys
 from functools import partial
-from dsgrn_net_query.utilities.file_utilities import read_networks
+from dsgrn_net_query.utilities.file_utilities import read_networks, create_results_folder
 from mpi4py import MPI
 from mpi4py.futures import MPICommExecutor
 
 def query(network_file,params_file="",resultsdir=""):
     '''
     :param network_file: a .txt file containing either a single DSGRN network specification or a list of network specification strings in DSGRN format
-    :param params_file: An unnecessary .json file containing an empty dictionary that's here for API consistency only.
+    :param params_file: A .json file containing an empty dictionary (here for API consistency only).
     :param resultsdir: optional path to directory where results will be written, default is current directory
 
     :return: Writes count of parameters with a stable FC to a dictionary keyed by
@@ -23,14 +23,16 @@ def query(network_file,params_file="",resultsdir=""):
             print("Querying networks.")
             output=list(executor.map(work_function, enumerate(networks)))
             results = dict(output)
-            record_results(results,resultsdir)
+            record_results(network_file,params_file,results,resultsdir)
 
 
-def record_results(results,resultsdir):
+def record_results(network_file,params_file,results,resultsdir):
+    resultsdir = create_results_folder(network_file, params_file, resultsdir)
     rname = os.path.join(resultsdir,"query_results.json")
     if os.path.exists(rname):
         os.rename(rname,rname+".old")
     json.dump(results,open(rname,'w'))
+    print(resultsdir)
 
 
 def is_FC(annotation):

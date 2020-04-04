@@ -1,6 +1,6 @@
 import DSGRN
 import os, json, sys,subprocess,progressbar
-from dsgrn_net_query.utilities.file_utilities import read_networks
+from dsgrn_net_query.utilities.file_utilities import read_networks,create_results_folder
 from mpi4py import MPI
 from mpi4py.futures import MPICommExecutor
 import sqlite3
@@ -9,7 +9,7 @@ import sqlite3
 def query(network_file,params_file,resultsdir=""):
     '''
     :param network_file: a .txt file containing either a single DSGRN network specification or a list of network specification strings in DSGRN format
-    :param params_file: A json file with a dictionary with key "num_proc" that specifies the (integer) number of processes to use in the computations.
+    :param params_file: A json file with an empty dictionary (here for uniform API)
     :param resultsdir: optional path to directory where results will be written, default is current directory
 
     :return: Writes count of parameters with a stable FC to a dictionary keyed by
@@ -17,7 +17,7 @@ def query(network_file,params_file,resultsdir=""):
     '''
 
     networks = read_networks(network_file)
-    params = json.load(open(params_file))
+    resultsdir = create_results_folder(network_file, params_file, resultsdir)
 
     resultsdict = {}
     for k,netspec in enumerate(networks):
@@ -38,6 +38,7 @@ def query(network_file,params_file,resultsdir=""):
         subprocess.call(["rm",dbfile])
         print("Network {} of {} complete".format(k + 1, len(networks)))
         sys.stdout.flush()
+    print(resultsdir)
 
 
 def fromSignatures(specfile,outfile):
