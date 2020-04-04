@@ -94,4 +94,4 @@ def test_stableFP2():
 
 
 if __name__ == "__main__":
-    test_patternmatch2()
+    test_patternmatch()

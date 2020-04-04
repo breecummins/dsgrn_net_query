@@ -9,37 +9,46 @@ from mpi4py.futures import MPICommExecutor
 
 def query(network_file,params_file,resultsdir=""):
     '''
-    For each epsilon in a list of epsilons, a poset from time series data is created or accessed from the params dictionary.
-    This poset is matched against the domain graph for each parameter in each network from a list of networks.
-    The result is True if there is at least one match, False if not, or a count of the number of parameters with a match.
+    For each epsilon in a list of epsilons, a partially ordered set (poset) of maxima and minima of time series data
+    is created or accessed from the params dictionary.
+    This poset is matched against the domain graph for each DSGRN parameter for each network in a list of networks.
+    The result is True if there is at least one match, False if not, or the count of the number of parameters with a match.
 
-    :param network_file: a .txt file containing either a single DSGRN network specification or a list of network specification strings in DSGRN format
+    :param network_file: a .txt file containing either a single DSGRN network specification or a list of network
+    specification strings in DSGRN format
     :param params_file: A .json file containing a dictionary with the keys
-        "matchingfunction" : a string or list of strings containing the name(s) of one of the matching functions in this module
-        **NOTE** Cycle matches are not recommended. They will not work unless, for each variable, the first and last extrema have the same label.
-        "count" : True or False, whether to count all params or shortcut at first success
+        "domain" : True or False (true or false in .json format), whether or not to perform a path search anywhere in the domain graph
+        "stablefc" : True or False (true or false in .json format), whether or not to perform a path search within stable full cycles
+        Both "domain" and "stablefc" are allowed to be True.
+        "count" : True or False (true or false in .json format), whether to count all DSGRN parameters or shortcut at first success
         One can either specify posets directly, or extract posets from timeseries data.
-        Include EITHER
-        "posets" : a (quoted) dictionary of Python tuples of node names keying a list of tuples of epsilon with a DSGRN
-        formatted poset:
-                    '{ ("A","B","C") : [(eps11,poset11), (eps21,poset21),...], ("A","B","D") : [(eps12,poset12), (eps22,
-                    poset22),...] }' (the quotes are to handle difficulties with the json format)
-        OR the three keys
-        "timeseriesfname" : path to a file containing the time series data from which to make posets
+        Include EITHER the three keys
+        "timeseriesfname" : path to a file or list of files containing the time series data from which to make posets
         "tsfile_is_row_format" : True if the time series file is in row format (times are in the first row); False if in
         column format (times are in the first column)
         "epsilons" : list of floats 0 <= x <= 0.5, one poset will be made for each x
                     Note that an epsilon of 0.10 means that the noise level is considered to be +/- 10% of the distance
                     between global maximum and global minimum for each time series. Thus all information on curve shape
-                    is lost at epsilon = 0.5. It is recommended to stay far below that level
+                    is lost at epsilon = 0.5. It is recommended to stay below that level.
+        OR the single key
+        "posets" : a (quoted) dictionary of Python tuples of node names keying a list of tuples of epsilon with a DSGRN
+        formatted poset:
+                    '{ ("A","B","C") : [(eps11,poset11), (eps21,poset21),...], ("A","B","D") : [(eps12,poset12), (eps22,
+                    poset22),...] }' (the quotes are to handle difficulties with the json format)
+        This key takes specialized information and is not likely to be specified in general usage.
     :param resultsdir: optional path to directory where results will be written, default is current directory
 
     :return: Writes True (pattern match for the poset) or False (no pattern match) or
-        parameter count (# successful matches) plus the number of parameters for each
-         epsilon to a dictionary keyed by network spec, which is dumped to a json file:
-         { networkspec : [(eps, result, num params)] }
-         For PathMatchinStableFullCycle with count = True, the count of stable full cycles is added:
-         { networkspec : [(eps, result, num stable full cycles, num params)] }
+         DSGRN parameter count (# successful matches) plus the DSGRN parameter graph size for each
+         network to a dictionary keyed by network spec, which is dumped to a json file:
+         { networkspec : [(eps, result, num DSGRN params)] }.
+         When "stablefc" and "count" are both True, the number of stable full cycles is also recorded:
+         { networkspec : [(eps, result, num stable full cycles, num DSGRN params)] }
+         Separate files will be written for "domain", "stablefc", and each timeseries file name.
+         When multiple time series are specified and "count" is True, a file with the string "all" in the name will be
+         written with the aggregated results of all files.
+         This is recorded because DSGRN parameters will in general be double-counted between time series, and "all" gives the
+         number of DSGRN parameters with a match to at least one time series poset.
     '''
 
     networks = read_networks(network_file)
@@ -113,8 +122,9 @@ def PathMatches_with_count(network, posets, domain, stablefc):
     Search for path matches anywhere in the domain graph.
     :return: Integer count of parameters if count = True; if count = False return True if at least one match, False otherwise.
     '''
-    totalDom= {"all": {str(eps[0]) : set() for eps in posets[next(iter(posets))]} }
-    totalFC = {"all": {str(eps[0]) : set() for eps in posets[next(iter(posets))]} }
+    if len(posets) > 1:
+        totalDom= {"all": {str(eps[0]) : set() for eps in posets[next(iter(posets))]} }
+        totalFC = {"all": {str(eps[0]) : set() for eps in posets[next(iter(posets))]} }
     numDomMatch = { tsfile : {str(eps[0]) : 0 for eps in poset_list} for tsfile,poset_list in posets.items()}
     numFCMatch = { tsfile : {str(eps[0]) : 0 for eps in poset_list} for tsfile,poset_list in posets.items()}
     numFC = 0
@@ -129,7 +139,8 @@ def PathMatches_with_count(network, posets, domain, stablefc):
                     dommatch = domain_check(domaingraph,patterngraph)
                     if dommatch:
                         numDomMatch[tsfile][str(eps)]+=1
-                        totalDom["all"][str(eps)].add(paramind)
+                        if len(posets) > 1:
+                            totalDom["all"][str(eps)].add(paramind)
                 if stablefc:
                     stabmatch, newFC = stableFC_check(domaingraph,patterngraph)
                     if newFC and not FC:
@@ -137,11 +148,13 @@ def PathMatches_with_count(network, posets, domain, stablefc):
                         FC = True
                     if stabmatch:
                         numFCMatch[tsfile][str(eps)]+=1
-                        totalFC["all"][str(eps)].add(paramind)
-    dommatches = {"all": [(float(eps),len(totalDom["all"][eps]),paramgraph.size()) for eps in totalDom["all"]]}
-    dommatches.update({tsfile : [(float(eps),count,paramgraph.size()) for eps,count in edict.items()] for tsfile,edict in numDomMatch.items()})
-    fcmatches = {"all" : [(float(eps),len(totalFC["all"][eps]),numFC,paramgraph.size()) for eps in totalFC["all"]]}
-    fcmatches.update({tsfile : [(float(eps),count,numFC,paramgraph.size()) for eps,count in edict.items()] for tsfile,edict in numFCMatch.items()})
+                        if len(posets) > 1:
+                            totalFC["all"][str(eps)].add(paramind)
+    dommatches = {tsfile : [(float(eps),count,paramgraph.size()) for eps,count in edict.items()] for tsfile,edict in numDomMatch.items()}
+    fcmatches = {tsfile : [(float(eps),count,numFC,paramgraph.size()) for eps,count in edict.items()] for tsfile,edict in numFCMatch.items()}
+    if len(posets)>1:
+        dommatches.update({"all": [(float(eps),len(totalDom["all"][eps]),paramgraph.size()) for eps in totalDom["all"]]})
+        fcmatches.update({"all" : [(float(eps),len(totalFC["all"][eps]),numFC,paramgraph.size()) for eps in totalFC["all"]]})
     return dommatches,fcmatches
 
 
