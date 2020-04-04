@@ -10,6 +10,7 @@ def test_count_stableFCln():
     output_file = os.path.join(qdir,"query_results.json")
     results = json.load(open(output_file))
     assert(results == {"SWI4 : (NDD1)(~YOX1) : E\nHCM1 : SWI4 : E\nNDD1 : HCM1 : E\nYOX1 : SWI4 : E": [2, 14], "SWI4 : (NDD1)(~YOX1) : E\nHCM1 : SWI4 : E\nNDD1 : HCM1 : E\nYOX1 : NDD1 : E": [0, 4]})
+    time.sleep(1)
 
 
 def test_count_stableFC():
@@ -21,3 +22,6 @@ def test_count_stableFC():
     assert(results == {"SWI4 : (NDD1)(~YOX1) : E\nHCM1 : SWI4 : E\nNDD1 : HCM1 : E\nYOX1 : SWI4 : E": [2, 14], "SWI4 : (NDD1)(~YOX1) : E\nHCM1 : SWI4 : E\nNDD1 : HCM1 : E\nYOX1 : NDD1 : E": [0, 4]})
     subprocess.call(["rm","-r", "temp_results/"])
 
+
+if __name__ == "__main__":
+    test_count_stableFCln()
