@@ -25,6 +25,9 @@ The recommended way to do a query is to use the `dsgrn_net_query/call_job.py` fu
 python call_job.py <num_processes> <querymodule.py> <networks_file.txt> <params.json> <optional_results_directory>
 
 ```
+This function saves commandline output to the log file `dsgrn_net_query.log`. 
+
+NOTE: Calling `call_job.py` with the query module `CountStableFC_large_networks.py` means the number of processes will be doubly specified, since the number of processes is also a required argument in the parameter file for `CountStableFC_large_networks.py` only. The commandline argument will overwrite whatever number of processes is in the parameter file.
 
 Alternatively, direct calls on the command line look like this (except for `CountStableFC_large_networks.py`).
 ```bash    
@@ -34,8 +37,9 @@ The call for `CountStableFC_large_networks.py` is
 ```bash    
     python CountStableFC_large_networks.py <networks_file.txt> <params.json> <optional_results_directory>
 ```   
-All functions create a unique date-time stamped folder in which to store results, so that overwriting old results is not possible. 
+ Depending on the size and number of the networks, these computations can take a long time, and it is recommended to run via a scheduler or in the background.
 
+All functions create a unique date-time stamped folder in which to store results, so that overwriting old results is not possible.
 
 
 # Inputs 
