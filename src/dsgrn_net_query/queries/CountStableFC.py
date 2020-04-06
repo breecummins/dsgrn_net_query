@@ -5,6 +5,7 @@ from dsgrn_net_query.utilities.file_utilities import read_networks, create_resul
 from mpi4py import MPI
 from mpi4py.futures import MPICommExecutor
 
+
 def query(network_file,params_file="",resultsdir=""):
     '''
     :param network_file: a .txt file containing either a single DSGRN network specification or a list of network specification strings in DSGRN format
@@ -13,13 +14,17 @@ def query(network_file,params_file="",resultsdir=""):
                         whether or not to return the number of matches (True) or just whether or not there is at least one match (False)
     :param resultsdir: optional path to directory where results will be written, default is current directory
 
-    :return: Writes count of parameters with a stable FC to a dictionary keyed by
-    network spec, which is dumped to a json file.
+    :return:  Writes a .json file containing a dictionary keyed by DSGRN network specification with a list of results.
+            The results are DSGRN parameter count that have at least one Morse set that is a stable full cycle,
+            or True (existence of at least one stable full cycle) or False (none exist), depending on the value of the parameter "count".
+            The size of the DSGRN parameter graph for the network is also recorded.
+            { networkspec : [result, DSGRN param graph size] }.
     '''
 
     networks = read_networks(network_file)
     params = json.load(open(params_file))
-    count = params["count"]
+
+    count = sanity_check(params)
 
     work_function = partial(check_FC, count, len(networks))
     with MPICommExecutor(MPI.COMM_WORLD, root=0) as executor:
@@ -30,7 +35,26 @@ def query(network_file,params_file="",resultsdir=""):
             record_results(network_file,params_file,results,resultsdir)
 
 
+def sanity_check(params):
+    '''
+    Checks to be sure the correct keys are in the dictionary params.
+    :param params: dictionary
+    :return: Either the value of the key "count" in the parameter dictionary, or an error is raised.
+    '''
+    if "count" not in params:
+        raise ValueError("The key 'count' must be specified in the parameter file.")
+    return params["count"]
+
+
 def record_results(network_file,params_file,results,resultsdir):
+    '''
+    Record results in a .json file.
+    :param network_file: The input .txt file containing the list of DSGRN network specifications.
+    :param params_file: The input .json parameter file.
+    :param results: The dictionary of results.
+    :param resultsdir: The location to save the dictionary of results.
+    :return: None. File is written.
+    '''
     resultsdir = create_results_folder(network_file, params_file, resultsdir)
     rname = os.path.join(resultsdir,"query_results.json")
     if os.path.exists(rname):
@@ -40,11 +64,23 @@ def record_results(network_file,params_file,results,resultsdir):
 
 
 def is_FC(annotation):
+    '''
+    Specifies whether a Morse set is a full cycle.
+    :param annotation: DSGRN annotation string
+    :return: True or False
+    '''
     return annotation.startswith("FC")
 
 
-def check_FC(count,N,tup):
-    k,netspec = tup
+def check_FC(count,N,enum_network):
+    '''
+    Work function for parallelization.
+    :param count: True or False, count DSGRN parameters or shortcut to existence
+    :param N: Size of the DSGRN parameter graph
+    :param enum_network: An (integer, DSGRN network specification) pair
+    :return: (DSGRN network specification, results) pair
+    '''
+    k,netspec = enum_network
     numparams = 0
     network = DSGRN.Network(netspec)
     parametergraph = DSGRN.ParameterGraph(network)

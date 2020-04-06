@@ -12,8 +12,10 @@ def calculate_poset(params, networks):
                     'tsfile_is_row_format' : True if time series are in rows, False if they are in columns.
                     "epsilons" : a list of noise values between 0.0 and 0.5
 
-    :param networks:
-    :return:
+    :param networks: a list of DSGRN network specifications
+    :return: (1) A dictionary of partially ordered sets keyed by sets of node names in network files. Any input network
+            that has a node name that is not in the time series file will not be analyzed. (2) The list of pruned networks.
+            (3) The set of names that were missing from the time series files.
     '''
     data, times = readrow(params['timeseriesfname']) if params['tsfile_is_row_format'] else readcol(
         params['timeseriesfname'])
@@ -38,15 +40,16 @@ def calculate_poset(params, networks):
 
 def calculate_posets_from_multiple_time_series(params,networks):
     '''
-
+    Calculate partially ordered sets of extrema for each epsilon in a list and for each time series in a list.
 
     :param params: A dictionary with the keys
                     'timeseriesfname' : a .csv or .tsv file name or a list of such file names
                     'tsfile_is_row_format' : True if time series are in rows, False if they are in columns.
                                     **NOTE** : All time series must in the same format, row or column
-                    "epsilons" : a list of noise values between 0.0 and 0.5
+                    "epsilons" : a list of floating point noise values between 0.0 and 0.5
     :param networks: Either a list of network specifications or a .txt file containing a list of network specifications
-    :return: A dictionary of partial orders for multiple time series and a set of networks for which at least one pattern match will be performed.
+    :return: A dictionary of partial orders for multiple time series and a set of networks that will be pattern matched
+            across all time series.
     '''
     if isinstance(params['timeseriesfname'],str):
         timeseries_files = [params['timeseriesfname']]

@@ -34,7 +34,10 @@ def query(network_file,params_file,resultsdir=""):
             The results are DSGRN parameter count with successful matches to the fixed point bounds, or True
             (existence of at least one match) or False (no matches exist), depending on the value of the parameter "count".
             The size of the DSGRN parameter graph for the network is also recorded.
-            { networkspec : [result, num DSGRN params] }.
+            { networkspec : [result, DSGRN param graph size] }.
+            If "hex_constraints" are specified, then the number of DSGRN parameters that satsify those hex constraints
+            (with or without a bounds match) are also recorded.
+            { networkspec : [result, num params with hex constraints, DSGRN param graph size] }.
     '''
 
     networks = read_networks(network_file)
@@ -55,6 +58,11 @@ def query(network_file,params_file,resultsdir=""):
 
 
 def sanity_check(params):
+    '''
+    Checks to be sure the correct keys are in the dictionary params.
+    :param params: dictionary
+    :return: None, errors are raised.
+    '''
     if not all(["included_bounds" in params,"excluded_bounds" in params, "count" in params]):
         raise ValueError("The parameter file must contain keys 'included_bounds', 'excluded_bounds', and 'count'.")
 

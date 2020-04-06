@@ -46,9 +46,10 @@ def query(network_file,params_file,resultsdir=""):
         or False (no pattern matches exist), depending on the value of the parameter "count". The size of the DSGRN
         parameter graph for the network and the value of 'epsilon' for the attempted match to the time series are
         also recorded.
-        { networkspec : [(eps, result, num DSGRN params)] }.
-        When "stablefc" and "count" are both True, the number of stable full cycles is also recorded:
-        { networkspec : [(eps, result, num stable full cycles, num DSGRN params)] }
+        { networkspec : [(eps, result, DSGRN param graph size)] }.
+        When "stablefc" and "count" are both True, the number of stable full cycles (with or without a pattern match)
+        is also recorded:
+        { networkspec : [(eps, result, num stable full cycles, DSGRN param graph size)] }
 
         Separate files will be written for "domain", "stablefc", and each timeseries file name.
         When multiple time series are specified and "count" is True, a file with the string "all" in the name will be

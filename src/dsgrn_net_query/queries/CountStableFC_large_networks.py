@@ -15,14 +15,16 @@ def query(network_file,params_file,resultsdir=""):
                         whether or not to return the number of matches (True) or just whether or not there is at least one match (False)
     :param resultsdir: optional path to directory where results will be written, default is current directory
 
-    :return: Writes count of parameters with a stable FC to a dictionary keyed by
-    network spec, which is dumped to a json file.
+    :return: Writes a .json file containing a dictionary keyed by DSGRN network specification with a list of results.
+            The results are DSGRN parameter count that have at least one Morse set that is a stable full cycle,
+            or True (existence of at least one stable full cycle) or False (none exist), depending on the value of the parameter "count".
+            The size of the DSGRN parameter graph for the network is also recorded.
+            { networkspec : [result, DSGRN param graph size] }.
     '''
 
     networks = read_networks(network_file)
     params = json.load(open(params_file))
-    num_proc = params["num_proc"]
-    count = params["count"]
+    num_proc, count = sanity_check(params)
 
     resultsdict = {}
     for k,netspec in enumerate(networks):
@@ -30,7 +32,6 @@ def query(network_file,params_file,resultsdir=""):
         dbfile = "temp{}.db".format(k)
         with open(netfile,"w") as f:
             f.write(netspec)
-        # fromSignatures(netfile,dbfile)
         subprocess.check_call("mpiexec -n {} Signatures {} {}".format(num_proc,netfile,dbfile),shell=True)
         db = DSGRN.Database(dbfile)
         N = db.parametergraph.size()
@@ -46,7 +47,27 @@ def query(network_file,params_file,resultsdir=""):
     record_results(resultsdir,resultsdict)
 
 
+def sanity_check(params):
+    '''
+    Checks to be sure the correct keys are in the dictionary params.
+    :param params: dictionary
+    :return: Either the values of the keys "num_proc" and "count" in the parameter dictionary, or an error is raised.
+    '''
+    if "num_proc" not in params or "count" not in params:
+        raise ValueError("The keys 'num_proc' and 'count' must be specified in the parameter file.")
+    return params["num_proc"],params["count"]
+
+
+
 def record_results(resultsdir,resultsdict):
+    '''
+    Record results in a .json file.
+    :param network_file: The input .txt file containing the list of DSGRN network specifications.
+    :param params_file: The input .json parameter file.
+    :param results: The dictionary of results.
+    :param resultsdir: The location to save the dictionary of results.
+    :return: None. File is written.
+    '''
     resultsdir = create_results_folder(network_file, params_file, resultsdir)
     rname = os.path.join(resultsdir,"query_results.json")
     if os.path.exists(rname):
@@ -55,34 +76,37 @@ def record_results(resultsdir,resultsdict):
     print(resultsdir)
 
 
-def read_networks(network_object):
+def read_networks(network_file):
     '''
-    Forced to copy from file_utilities due to collision between import of MPI and the mpiexec call inside this file.
+    NOTE: Forced to copy from file_utilities due to collision between import of MPI and the mpiexec call inside this file.
 
-    Identify a list of networks or generate a list of DSGRN network specifications from a .txt file, such as that produced in makejobs.Job.run().
-
-    :param networks: Either a list of network specifications or a .txt file containing a single DSGRN network specification or a list of network specifications,
+    Read a .txt network file that has either a single DSGRN network specification or a list of them
+    :param networks: A .txt file containing a single DSGRN network specification or a list of network specifications,
     :return: list of DSGRN network specifications
     '''
 
-    if isinstance(network_object,list):
-        networks = network_object
-    elif isinstance(network_object,str):
-        # read network file
-        network_str = open(network_object).read()
-        if not network_str:
-            networks = []
-        elif network_str[0] == "[":
-            networks = ast.literal_eval(network_str)
-        else:
-            while network_str[-1] == '\n':
-                network_str = network_str[:-1]
-            networks = [network_str]
+    network_str = open(network_file).read()
+    if not network_str:
+        networks = []
+    elif network_str[0] == "[":
+        networks = ast.literal_eval(network_str)
+    else:
+        while network_str[-1] == '\n':
+            network_str = network_str[:-1]
+        networks = [network_str]
     return networks
 
 
 def create_results_folder(network_file, params_file, resultsdir):
-    # Forced to copy from file_utilities due to collision between import of MPI and the mpiexec call inside this file.
+    '''
+    NOTE: Forced to copy from file_utilities due to collision between import of MPI and the mpiexec call inside this file.
+
+    Create a date-time stamped folder to save results. Copy over input files.
+    :param network_file: A .txt file
+    :param params_file: A .json file
+    :param resultsdir: optional path to directory where results will be written
+    :return: string containing path to date-time stamped directory to save results file
+    '''
     datetime = subprocess.check_output(['date +%Y_%m_%d_%H_%M_%S'], shell=True).decode(sys.stdout.encoding).strip()
     dirname = os.path.join(os.path.expanduser(resultsdir), "dsgrn_net_query_results" + datetime)
     queriesdir = os.path.join(dirname, "queries" + datetime)
@@ -95,112 +119,6 @@ def create_results_folder(network_file, params_file, resultsdir):
     if params_file:
         shutil.copy(params_file, inputfilesdir)
     return queriesdir
-
-# def fromSignatures(specfile,outfile):
-#     '''
-#     Lifted from Signatures.py because it can't be imported.
-#
-#     :param specfile: network specification file
-#     :param outfile: output database file
-#     :return: None, writes to file
-#     '''
-#     gpg = DSGRN.ParameterGraph(DSGRN.Network(specfile))
-#
-#     def work(pi):
-#         return (pi, DSGRN.MorseGraph(DSGRN.DomainGraph(gpg.parameter(pi))).stringify())
-#
-#     # global gpg
-#     with MPICommExecutor(MPI.COMM_WORLD, root=0) as executor:
-#         if executor is not None:
-#             bar = progressbar.ProgressBar(max_value=gpg.size())
-#             print("Computing Morse Graphs")
-#             results = list(bar(executor.map(work, range(0, gpg.size()), chunksize=65536)))
-#             SaveDatabase(outfile, results, gpg)
-#
-#
-# def SaveDatabase(filename, data, pg):
-#     '''
-#     Lifted from Signatures.py because it can't be imported.
-#
-#     :param filename: output database name
-#     :param data: output from parallel process
-#     :param pg: parameter graph
-#     :return: None, writes to file
-#     '''
-#     print("Save Database")
-#     N = pg.size()
-#     conn = sqlite3.connect(filename)
-#     conn.executescript("""
-#       create table if not exists Signatures (ParameterIndex INTEGER PRIMARY KEY, MorseGraphIndex INTEGER);
-#       create table if not exists MorseGraphViz (MorseGraphIndex INTEGER PRIMARY KEY, Graphviz TEXT);
-#       create table if not exists MorseGraphVertices (MorseGraphIndex INTEGER, Vertex INTEGER);
-#       create table if not exists MorseGraphEdges (MorseGraphIndex INTEGER, Source INTEGER, Target INTEGER);
-#       create table if not exists MorseGraphAnnotations (MorseGraphIndex INTEGER, Vertex INTEGER, Label TEXT);
-#       create table if not exists Network ( Name TEXT, Dimension INTEGER, Specification TEXT, Graphviz TEXT);
-#       """)
-#
-#     # Postprocessing to give Morse Graphs indices
-#     morsegraphs = []
-#
-#     def signatures_table(data):
-#         bar = progressbar.ProgressBar(max_value=N)
-#         morsegraphindices = {}
-#         for (pi, mg) in data:
-#             bar.update(pi)
-#             if mg in morsegraphindices:  # ideally I'd have a graph isomorphism check
-#                 mgi = morsegraphindices[mg]
-#             else:
-#                 mgi = len(morsegraphindices)
-#                 morsegraphindices[mg] = mgi
-#                 morsegraphs.append(mg)
-#             yield (pi, mgi)
-#         bar.finish()
-#
-#     def MG(mgi):
-#         return DSGRN.MorseGraph().parse(morsegraphs[mgi])
-#
-#     name = filename
-#     if filename[-3:] == '.db':
-#         name = filename[:-3]
-#
-#     print("Inserting Network table into Database", flush=True)
-#     conn.execute("insert into Network ( Name, Dimension, Specification, Graphviz) values (?, ?, ?, ?);",
-#                  (name, pg.network().size(), pg.network().specification(), pg.network().graphviz()))
-#
-#     print("Inserting Signatures table into Database", flush=True)
-#     conn.executemany("insert into Signatures (ParameterIndex, MorseGraphIndex) values (?, ?);", signatures_table(data))
-#
-#     print("Inserting MorseGraphViz table into Database", flush=True)
-#     conn.executemany("insert into MorseGraphViz (MorseGraphIndex, Graphviz) values (?, ?);",
-#                      ((mgi, MG(mgi).graphviz()) for mgi in progressbar.ProgressBar()(range(0, len(morsegraphs)))))
-#
-#     print("Inserting MorseGraphVertices table into Database", flush=True)
-#     conn.executemany("insert into MorseGraphVertices (MorseGraphIndex, Vertex) values (?, ?);",
-#                      ((mgi, v) for mgi in progressbar.ProgressBar()(range(0, len(morsegraphs))) for v in
-#                       range(0, MG(mgi).poset().size())))
-#
-#     print("Inserting MorseGraphEdges table into Database", flush=True)
-#     conn.executemany("insert into MorseGraphEdges (MorseGraphIndex, Source, Target) values (?, ?, ?);",
-#                      ((mgi, s, t) for mgi in progressbar.ProgressBar()(range(0, len(morsegraphs))) for s in
-#                       range(0, MG(mgi).poset().size()) for t in MG(mgi).poset().children(s)))
-#
-#     print("Inserting MorseGraphAnnotations table into Database", flush=True)
-#     conn.executemany("insert into MorseGraphAnnotations (MorseGraphIndex, Vertex, Label) values (?, ?, ?);",
-#                      ((mgi, v, label) for mgi in progressbar.ProgressBar()(range(0, len(morsegraphs))) for v in
-#                       range(0, MG(mgi).poset().size()) for label in MG(mgi).annotation(v)))
-#
-#     print("Indexing Database.", flush=True)
-#     conn.executescript("""
-#       create index if not exists Signatures2 on Signatures (MorseGraphIndex, ParameterIndex);
-#       create index if not exists MorseGraphAnnotations3 on MorseGraphAnnotations (Label, MorseGraphIndex);
-#       create index if not exists MorseGraphViz2 on MorseGraphViz (Graphviz, MorseGraphIndex);
-#       create index if not exists MorseGraphVertices1 on MorseGraphVertices (MorseGraphIndex, Vertex);
-#       create index if not exists MorseGraphVertices2 on MorseGraphVertices (Vertex, MorseGraphIndex);
-#       create index if not exists MorseGraphEdges1 on MorseGraphEdges (MorseGraphIndex);
-#       create index if not exists MorseGraphAnnotations1 on MorseGraphAnnotations (MorseGraphIndex);
-#       """)
-#     conn.commit()
-#     conn.close()
 
 
 if __name__ == "__main__":
