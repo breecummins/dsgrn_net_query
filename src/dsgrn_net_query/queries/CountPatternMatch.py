@@ -302,7 +302,7 @@ if __name__ == "__main__":
     if len(sys.argv) < 3:
         print(
         "Calling signature has two required arguments \n " \
-        "mpiexec -n <num_processes> python patternmatch.py <path_to_network_file> <path_to_parameter_file>"
+        "mpiexec -n <num_processes> python CountPatternMatch.py <path_to_network_file> <path_to_parameter_file>"
         )
         exit(1)
     network_file = sys.argv[1]

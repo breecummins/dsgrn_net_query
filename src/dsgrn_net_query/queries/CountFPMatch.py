@@ -4,30 +4,27 @@ from functools import partial
 from mpi4py import MPI
 from mpi4py.futures import MPICommExecutor
 from dsgrn_net_query.utilities.file_utilities import read_networks, create_results_folder
-from dsgrn_net_query.utilities.dsgrn_utilities import satisfies_hex_constraints
 
 
 def query(network_file,params_file,resultsdir=""):
     '''
     Take the intersection of an arbitrary number of DSGRN fixed points in a list.
 
-    :param network_file: a .txt file containing either a single DSGRN network specification or a list of network specification strings in DSGRN format
-    :param params_file: A json file with a dictionary containing the keys "included_bounds", "excluded_bounds", "count", and optionally "hex_constraints".
-                    The "bounds" variables are each a list of dictionaries of variable names common to all network
+    :param network_file: a .txt file containing either a single DSGRN network specification or
+                a list of network specification strings in DSGRN format
+    :param params_file: A json file with a dictionary containing the keys
+                    "included_bounds", "excluded_bounds", and "count".
+                    The two "bounds" variables are each a list of dictionaries of variable names common to all network
                     specifications with an associated integer range.
                     Example: [{"X1":[2,2],"X2":[1,1],"X3":[0,1]},{"X1":[0,1],"X2":[1,1],"X3":[2,3]}]
                     The integer ranges are the matching conditions for an FP.
                     For example, if there are four variables X1, X2, X3, X4 in the network spec,
                     the FP (2,1,0,*) would be a match to the first fixed point for any value of *.
+                    The "included_bounds" are those fixed points that must be present and
+                    the "excluded_bounds" are those that must be absent. Either one or both may be empty. When they are both empty,
+                    the count is just the number of parameters with at least one fixed point.
                     "count" : True or False (true or false in .json format);
                     whether to count all parameters with a match or shortcut at first success
-                    The optional key "hex_constraints" is a dictionary of lists keying a tuple of two integers to a list
-                    of hex numbers.
-                    The tuple key describes the node type: (num inedges, num outedges) and the list contains the
-                    allowable hex codes for this node type. In the algorithm below, only those hex codes in the list
-                    are permitted for the node type.
-                    Example: {(1,2) : ["C"], (3,1) : ["0"]} means that any node with 1 in-edge and 2 out-edges must have
-                    hex code 0x0C and any node with 3 in-edges and 1 outedge must have hex code 0.
     :param resultsdir: optional path to directory where results will be written, default is current directory
 
     :return: Writes a .json file containing a dictionary keyed by DSGRN network specification with a list of results.
@@ -48,10 +45,7 @@ def query(network_file,params_file,resultsdir=""):
     if not networks:
         raise ValueError("No networks available for analysis. Make sure network file is in the correct format.")
     else:
-        if "hex_constraints" in params and params["hex_constraints"]:
-            work_function = partial(compute_for_network_with_constraints, params, len(networks))
-        else:
-            work_function = partial(compute_for_network_without_constraints, params, len(networks))
+        work_function = partial(search_over_networks, params, len(networks))
         with MPICommExecutor(MPI.COMM_WORLD, root=0) as executor:
             if executor is not None:
                 print("Querying networks.")
@@ -87,9 +81,9 @@ def record_results(network_file, params_file,results,resultsdir):
     print(resultsdir)
 
 
-def compute_for_network_without_constraints(params,N,enum_network):
+def search_over_networks(params,N,enum_network):
     '''
-    Work function for parallelization without DSGRN hex constraints on DSGRN parameters.
+    Work function for parallelization.
     :param params: dictionary containing the keys "included_bounds", "excluded_bounds", and "count"
     :param N: Size of the DSGRN parameter graph
     :param enum_network: An (integer, DSGRN network specification) pair
@@ -110,37 +104,6 @@ def compute_for_network_without_constraints(params,N,enum_network):
     sys.stdout.flush()
     if params["count"]:
         return netspec,(numparams,parametergraph.size())
-    else:
-        return netspec,(False,parametergraph.size())
-
-
-def compute_for_network_with_constraints(params,N,enum_network):
-    '''
-    Work function for parallelization with DSGRN hex constraints on DSGRN parameters.
-    :param params: dictionary containing the keys "included_bounds", "excluded_bounds", "count", and "hex_constraints".
-    :param N: Size of the DSGRN parameter graph
-    :param enum_network: An (integer, DSGRN network specification) pair
-    :return: (DSGRN network specification, results) pair
-    '''
-    (k, netspec) = enum_network
-    network, parametergraph = getpg(netspec)
-    numparams = 0
-    num_with_hex = 0
-    for p in range(parametergraph.size()):
-        param = parametergraph.parameter(p)
-        if satisfies_hex_constraints(param,params["hex_constraints"]):
-            num_with_hex += 1
-            if have_match(network, param, params["included_bounds"],params["excluded_bounds"]):
-                if params["count"]:
-                    numparams+=1
-                else:
-                    print("Network {} of {} complete.".format(k + 1, N))
-                    sys.stdout.flush()
-                    return (netspec,(True, parametergraph.size()))
-    print("Network {} of {} complete.".format(k + 1, N))
-    sys.stdout.flush()
-    if params["count"]:
-        return netspec,(numparams,num_with_hex,parametergraph.size())
     else:
         return netspec,(False,parametergraph.size())
 
@@ -251,7 +214,7 @@ if __name__ == "__main__":
      if len(sys.argv) < 3:
         print(
         "Calling signature has two required arguments \n " \
-        "mpiexec -n <num_processes> python MultistabilityExists.py <path_to_network_file> <path_to_parameter_file>"
+        "mpiexec -n <num_processes> python CountFPMatch.py <path_to_network_file> <path_to_parameter_file>"
         )
         exit(1)
      network_file = sys.argv[1]

@@ -28,7 +28,7 @@ def query(network_file,params_file="",resultsdir=""):
         raise ValueError("No networks available for analysis. Make sure network file is in the correct format.")
     else:
         count = sanity_check(params)
-        work_function = partial(check_FC, count, len(networks))
+        work_function = partial(search_over_networks, count, len(networks))
         with MPICommExecutor(MPI.COMM_WORLD, root=0) as executor:
             if executor is not None:
                 print("Querying networks.")
@@ -74,7 +74,7 @@ def is_FC(annotation):
     return annotation.startswith("FC")
 
 
-def check_FC(count,N,enum_network):
+def search_over_networks(count,N,enum_network):
     '''
     Work function for parallelization.
     :param count: True or False, count DSGRN parameters or shortcut to existence
