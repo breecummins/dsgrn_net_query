@@ -39,4 +39,5 @@ def test_multistability2():
     output_file = os.path.join(qdir,"query_results.json")
     results = json.load(open(output_file))
     assert(results == {'inducer1 :  : E\ninducer2 :  : E\nreceiver1 : (inducer1 + reporter) : E\nreceiver2 : (inducer1 + inducer2)(~receiver1) : E\nreporter : (inducer1 + inducer2)(~receiver2) : E\n': [False, 23328], 'inducer1 : (inducer1) : E\ninducer2 : (inducer2) : E\nreporter : (x3) : E\nx1 : (~inducer1)(~x2) : E\nx2 : (x3)(~inducer2) : E\nx3 : (x2) : E\n': [True, 224]})
+    subprocess.call(["rm","-r", "temp_results/"])
 

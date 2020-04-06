@@ -65,7 +65,8 @@ def test_patternmatch3():
         'X1 : (X1)(~X3) : E\nX2 : (X1 + X3) : E\nX3 : (X1 + X2) : E\n': [[0.0, 205, 532, 2352], [0.1, 317, 532, 2352]],
         'X1 : (X1)(~X3) : E\nX2 : (X1) : E\nX3 : (X1 + X2) : E\n': [[0.0, 40, 74, 168], [0.1, 54, 74, 168]],
         'X1 : (X1)(~X3) : E\nX2 : (X3)(~X1) : E\nX3 : (X1 + X2) : E\n': [[0.0, 0, 299, 2352], [0.1, 0, 299, 2352]]})
+    subprocess.call(["rm","-r", "temp_results/"])
 
 
 if __name__ == "__main__":
-    test_patternmatch3()
+    test_patternmatch()
