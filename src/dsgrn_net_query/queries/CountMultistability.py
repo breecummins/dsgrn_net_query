@@ -6,6 +6,7 @@ from mpi4py.futures import MPICommExecutor
 from dsgrn_net_query.utilities.file_utilities import read_networks, create_results_folder
 from dsgrn_net_query.utilities.dsgrn_utilities import satisfies_hex_constraints
 
+
 def query(network_file,params_file,resultsdir=""):
     '''
     Take the intersection of an arbitrary number of DSGRN fixed points in a list.
@@ -16,7 +17,7 @@ def query(network_file,params_file,resultsdir=""):
                     specifications with an associated integer range.
                     Example: [{"X1":[2,2],"X2":[1,1],"X3":[0,1]},{"X1":[0,1],"X2":[1,1],"X3":[2,3]}]
                     The integer ranges are the matching conditions for an FP.
-                    For example, if there are four variablesm X1, X2, X3, X4 in the network spec,
+                    For example, if there are four variables X1, X2, X3, X4 in the network spec,
                     the FP (2,1,0,*) would be a match to the first fixed point for any value of *.
                     "count" : True or False (true or false in .json format);
                     whether to count all parameters with a match or shortcut at first success
@@ -29,23 +30,22 @@ def query(network_file,params_file,resultsdir=""):
                     hex code 0x0C and any node with 3 in-edges and 1 outedge must have hex code 0.
     :param resultsdir: optional path to directory where results will be written, default is current directory
 
-    :return: List of network specs that match all FPs in params["included_bounds"] and match none of
-             the FPs in params["excluded_bounds"] for at least 1 parameter that is dumped to a json file.
-             NOTE: This means that no matches returns an empty list.
+    :return: Writes a .json file containing a dictionary keyed by DSGRN network specification with a list of results.
+            The results are DSGRN parameter count with successful matches to the fixed point bounds, or True
+            (existence of at least one match) or False (no matches exist), depending on the value of the parameter "count".
+            The size of the DSGRN parameter graph for the network is also recorded.
+            { networkspec : [result, num DSGRN params] }.
     '''
 
     networks = read_networks(network_file)
     params = json.load(open(params_file))
 
-    included_bounds = [dict(b) for b in params["included_bounds"]]
-    excluded_bounds = [dict(b) for b in params["excluded_bounds"]]
-    count = params["count"]
+    sanity_check(params)
 
     if "hex_constraints" in params and params["hex_constraints"]:
-        hex_constraints = dict(params["hex_constraints"])
-        work_function = partial(compute_for_network_with_constraints, included_bounds, excluded_bounds, count, len(networks), hex_constraints)
+        work_function = partial(compute_for_network_with_constraints, params, len(networks))
     else:
-        work_function = partial(compute_for_network_without_constraints, included_bounds, excluded_bounds, count, len(networks))
+        work_function = partial(compute_for_network_without_constraints, params, len(networks))
     with MPICommExecutor(MPI.COMM_WORLD, root=0) as executor:
         if executor is not None:
             print("Querying networks.")
@@ -54,7 +54,20 @@ def query(network_file,params_file,resultsdir=""):
             record_results(network_file, params_file,results,resultsdir)
 
 
+def sanity_check(params):
+    if not all(["included_bounds" in params,"excluded_bounds" in params, "count" in params]):
+        raise ValueError("The parameter file must contain keys 'included_bounds', 'excluded_bounds', and 'count'.")
+
+
 def record_results(network_file, params_file,results,resultsdir):
+    '''
+    Record results in a .json file.
+    :param network_file: The input .txt file containing the list of DSGRN network specifications.
+    :param params_file: The input .json parameter file.
+    :param results: The dictionary of results.
+    :param resultsdir: The location to save the dictionary of results.
+    :return: None. File is written.
+    '''
     resultsdir = create_results_folder(network_file, params_file, resultsdir)
     rname = os.path.join(resultsdir,"query_results.json")
     if os.path.exists(rname):
@@ -63,13 +76,20 @@ def record_results(network_file, params_file,results,resultsdir):
     print(resultsdir)
 
 
-def compute_for_network_without_constraints(included_bounds,excluded_bounds,count,N,tup):
-    (k, netspec) = tup
+def compute_for_network_without_constraints(params,N,enum_network):
+    '''
+    Work function for parallelization without DSGRN hex constraints on DSGRN parameters.
+    :param params: dictionary containing the keys "included_bounds", "excluded_bounds", and "count"
+    :param N: Size of the DSGRN parameter graph
+    :param enum_network: An (integer, DSGRN network specification) pair
+    :return: (DSGRN network specification, results) pair
+    '''
+    (k, netspec) = enum_network
     network, parametergraph = getpg(netspec)
     numparams = 0
     for p in range(parametergraph.size()):
-        if have_match(network, parametergraph.parameter(p), included_bounds, excluded_bounds):
-            if count:
+        if have_match(network, parametergraph.parameter(p), params["included_bounds"], params["excluded_bounds"]):
+            if params["count"]:
                 numparams +=1
             else:
                 print("Network {} of {} complete.".format(k + 1, N))
@@ -77,23 +97,30 @@ def compute_for_network_without_constraints(included_bounds,excluded_bounds,coun
                 return (netspec,(True, parametergraph.size()))
     print("Network {} of {} complete.".format(k + 1, N))
     sys.stdout.flush()
-    if count:
+    if params["count"]:
         return netspec,(numparams,parametergraph.size())
     else:
         return netspec,(False,parametergraph.size())
 
 
-def compute_for_network_with_constraints(included_bounds,excluded_bounds,count,N,hex_constraints,tup):
-    (k, netspec) = tup
+def compute_for_network_with_constraints(params,N,enum_network):
+    '''
+    Work function for parallelization with DSGRN hex constraints on DSGRN parameters.
+    :param params: dictionary containing the keys "included_bounds", "excluded_bounds", "count", and "hex_constraints".
+    :param N: Size of the DSGRN parameter graph
+    :param enum_network: An (integer, DSGRN network specification) pair
+    :return: (DSGRN network specification, results) pair
+    '''
+    (k, netspec) = enum_network
     network, parametergraph = getpg(netspec)
     numparams = 0
     num_with_hex = 0
     for p in range(parametergraph.size()):
         param = parametergraph.parameter(p)
-        if satisfies_hex_constraints(param,hex_constraints):
+        if satisfies_hex_constraints(param,params["hex_constraints"]):
             num_with_hex += 1
-            if have_match(network, param, included_bounds,excluded_bounds):
-                if count:
+            if have_match(network, param, params["included_bounds"],params["excluded_bounds"]):
+                if params["count"]:
                     numparams+=1
                 else:
                     print("Network {} of {} complete.".format(k + 1, N))
@@ -101,20 +128,32 @@ def compute_for_network_with_constraints(included_bounds,excluded_bounds,count,N
                     return (netspec,(True, parametergraph.size()))
     print("Network {} of {} complete.".format(k + 1, N))
     sys.stdout.flush()
-    if count:
+    if params["count"]:
         return netspec,(numparams,num_with_hex,parametergraph.size())
     else:
         return netspec,(False,parametergraph.size())
 
 
-
 def getpg(netspec):
+    '''
+    Calculate DSGRN parameter graph
+    :param netspec: DSGRN network specification
+    :return: (DSGRN.Network object, DSGRN.ParameterGraph object)
+    '''
     network = DSGRN.Network(netspec)
     parametergraph = DSGRN.ParameterGraph(network)
     return network,parametergraph
 
 
 def have_match(network,parameter,included_bounds,excluded_bounds):
+    '''
+    Check if both included and excluded bounds are satisfied for any fixed point of the specified DSGRN parameter.
+    :param network: DSGRN.Network object
+    :param parameter: DSGRN.Parameter object
+    :param included_bounds: List of dictionaries of DSGRN fixed point bounds to include
+    :param excluded_bounds: List of dictionaries of DSGRN fixed point bounds to exclude
+    :return: True or False
+    '''
     stable_FP_annotations = DSGRN_Computation(parameter)
     included = all_included(network, included_bounds, stable_FP_annotations)
     excluded = all_excluded(network, excluded_bounds, stable_FP_annotations)
@@ -124,6 +163,11 @@ def have_match(network,parameter,included_bounds,excluded_bounds):
 
 
 def DSGRN_Computation(parameter):
+    '''
+    Get DSGRN annotations for all Morse sets that are fixed points.
+    :param parameter: DSGRN.Parameter object
+    :return: list of DSGRN annotations
+    '''
     dg = DSGRN.DomainGraph(parameter)
     md = DSGRN.MorseDecomposition(dg.digraph())
     mg = DSGRN.MorseGraph(dg, md)
@@ -132,21 +176,46 @@ def DSGRN_Computation(parameter):
 
 
 def is_FP(annotation):
+    '''
+    Specifies whether a Morse set is a fixed point.
+    :param annotation: DSGRN annotation string
+    :return: True or False
+    '''
     return annotation.startswith("FP")
 
 
 def is_FP_match(bounds_ind, annotation):
+    '''
+    Specifies whether a DSGRN fixed point satisfies the user-specified bounds on fixed point location.
+    :param bounds_ind: User-specified fixed point bounds using DSGRN indices for the variables.
+    :param annotation: DSGRN annotation string
+    :return: True or False
+    '''
     digits = [int(s) for s in annotation.replace(",", "").split() if s.isdigit()]
     return all(digits[k] >= bounds_ind[k][0] and digits[k] <= bounds_ind[k][1]
            for k in bounds_ind)
 
 
 def is_multistable_match(network,b,stable_FP_annotations):
+    '''
+    Checks across all fixed points for a match to bound b.
+    :param network: DSGRN.Network object
+    :param b: DSGRN fixed point bounds
+    :param stable_FP_annotations: list of DSGRN annotations
+    :return: True or False
+    '''
     bounds_ind = {network.index(str(k)): b[k] for k in b}
     return any([is_FP_match(bounds_ind, a) for a in stable_FP_annotations])
 
 
 def all_included(network,included_bounds,stable_FP_annotations):
+    '''
+    Checks if all included bounds are present in the collection of Morse sets.
+    :param network: DSGRN.Network object
+    :param included_bounds: list of DSGRN fixed point bounds
+    :param stable_FP_annotations: list of DSGRN annotations
+    :return: True or False
+    '''
     for b in included_bounds:
         if not is_multistable_match(network, b, stable_FP_annotations):
             return False
@@ -154,10 +223,18 @@ def all_included(network,included_bounds,stable_FP_annotations):
 
 
 def all_excluded(network,excluded_bounds,stable_FP_annotations):
+    '''
+    Checks if all excluded bounds are absent in the collection of Morse sets.
+    :param network: DSGRN.Network object
+    :param excluded_bounds: list of DSGRN fixed point bounds
+    :param stable_FP_annotations: list of DSGRN annotations
+    :return: True or False
+    '''
     for b in excluded_bounds:
         if is_multistable_match(network, b, stable_FP_annotations):
             return False
     return True
+
 
 if __name__ == "__main__":
      if len(sys.argv) < 3:

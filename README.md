@@ -2,7 +2,8 @@
 
 This module accepts a list of DSGRN-computable networks in a text file and performs a user-specified DSGRN query on every parameter of every network.
 
-__References:__ http://epubs.siam.org/doi/abs/10.1137/15M1052743, https://link.springer.com/chapter/10.1007/978-3-319-67471-1_19, https://www.ncbi.nlm.nih.gov/pmc/articles/PMC5975363/, https://journals.plos.org/ploscompbiol/article?id=10.1371/journal.pcbi.1006121
+__References:__ http://epubs.siam.org/doi/abs/10.1137/15M1052743, https://link.springer.com/chapter/10.1007/978-3-319-67471-1_19, https://www.ncbi.nlm.nih.gov/pmc/articles/PMC5975363/, https://journals.plos.org/ploscompbiol/article?id=10.1371/journal.pcbi.1006121, https://epubs.siam.org/doi/abs/10.1137/17M1134548, https://doi.org/10.1007/s00285-020-01471-4
+
 
 __Dependencies:__ Python 3.6/3.7, mpi4py 3.0.3, pandas, progressbar2, DSGRN (https://github.com/shaunharker/DSGRN or https://github.com/marciogameiro/DSGRN), and min_interval_posets (https://github.com/breecummins/min_interval_posets).
 
@@ -40,7 +41,7 @@ Neither of these last two calls creates a date-time stamped folder, so overwriti
 
 # Inputs 
 
-`querymodule.py`           =   any module in dsgrn_net_query/queries; Example: CountStableFC.py
+`querymodule.py`           =   any module in dsgrn_net_query/queries; currently the following queries are available: CountFPMatch.py CountStableFC.py, CountStableFC_large_networks.py, CountMultistability.py, and CountPatternMatch.py.
 
 `networks_file.txt`         =   path to a `.txt` file containing either a single DSGRN network specification
                             or a list of them (comma-separated and surrounded by square
@@ -68,24 +69,16 @@ results = json.load(open("query_results.json"))
 ``` 
 The keys are the DSGRN network specifications, and the values are usually `[# matches, param_graph_size]`, if `count = true`, and `[true_or_false, param_graph_size]`, if `count = false`. 
 
-However, the module `patternmatch.py` can save multiple files depending how many searches are indicated by the user. The example: `query_results_PathMatchInDomainGraph_wt_rnaseq_ts.json` indicates that queries were performed using the subroutine `PathMatchInDomainGraph` using the timeseries file `wt_rnaseq_ts.csv`. Both `.csv` and `.tsv` file types are acceptable. The file itself contains a list of results:
+However, the module `CountPatternMatch.py` can save multiple files depending how many searches are indicated by the user. The example: `query_results_domain_wt_rnaseq_ts.json` indicates that queries were performed using the subroutine that checks for a match to the timeseries file `wt_rnaseq_ts.csv` by searching through the whole domain graph. Both `.csv` and `.tsv` file types are acceptable. The file itself contains a list of results:
 ```
 [(epsilon_1, # matches, param_graph_size), (epsilon_2, # matches, param_graph_size), ... ] 
 ``` 
-If the subroutine `PathMatchInStableFullCycle` is specified, then the results are 
+If the output file has the form `query_results_stablefc_wt_rnaseq_ts.json`, then the query was performed only within stable full cycles of the Morse graph. The results for each network specification are of the form:
 ```
 [(epsilon_1, # matches, # stable full cycles, param_graph_size),   
  (epsilon_2, # matches, # stable full cycles, param_graph_size), ... ] 
 ``` 
 Again, `# matches` will be `true_or_false` if `count` is set to `false`.
-
-# Customizing 
-
-The `queries` package is extensible. Users can add DSGRN query modules to the package `dsgrn_net_query.queries` for inclusion in parameter files. The required API is a function with the following signature:
-
-      newmodule.query(networks_file.txt, params.json, optional_results_directory="")
-
-  The results must be saved to a `.json` file are saved to a file within the `optional_results_directory`. See the `queries` folder for already implemented queries with this API.
 
    # Troubleshooting
 
@@ -112,3 +105,13 @@ The `queries` package is extensible. Users can add DSGRN query modules to the pa
 3. In the particular case of the query `patternmatch.py`, there are additional parameters that affect search results. The choice of noise levels, `epsilons`, will strongly affect the number of matches. Generally speaking, `epsilons` in the range `[0,0.15]` are reasonable. An epsilon of 0.15 means 15% noise both above and below the curve; i.e., 30% of the difference between the global maximum and global minimum of each curve. Noise levels much higher than this are very permissive and may lead to spurious matches. Very low noise levels close or equal to zero may result in too few matches.
 
     Additionally, the type of search may be more or less restrictive. `PathMatchinDomainGraph` is more permissive than `PathMatchinStableFullCycle`. Use of the `CycleMatch` functions are not recommended at this time, since they are extremely dependent on precisely the integer number of periods in the time series that all start at an extremum, rather than half-max. Because of this restriction, matches are extremely unlikely to occur strictly for spurious reasons.
+    
+    
+# Customizing 
+
+The `queries` package is extensible. Users can add DSGRN query modules to the package `dsgrn_net_query.queries`. The required API is a function with the following signature:
+
+      newmodule.query(networks_file.txt, params.json, optional_results_directory="")
+
+  The query must be parallelized using `mpi4py` (see the function `query` in existing query modules). The results must be saved to a `.json` file with a dictionary keyed by network specifications within the `optional_results_directory` (see the function `record_results` in existing query modules). 
+

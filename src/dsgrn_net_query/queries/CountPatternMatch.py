@@ -12,7 +12,8 @@ def query(network_file,params_file,resultsdir=""):
     For each epsilon in a list of epsilons, a partially ordered set (poset) of maxima and minima of time series data
     is created or accessed from the params dictionary.
     This poset is matched against the domain graph for each DSGRN parameter for each network in a list of networks.
-    The result is True if there is at least one match, False if not, or the count of the number of parameters with a match.
+    The result is the count of the number of DSGRN parameters with a match OR is True if there is at least one match
+    and False if not, depending on the choice of the parameter "count".
 
     :param network_file: a .txt file containing either a single DSGRN network specification or a list of network
     specification strings in DSGRN format
@@ -21,6 +22,7 @@ def query(network_file,params_file,resultsdir=""):
         "stablefc" : True or False (true or false in .json format), whether or not to perform a path search within stable full cycles
         Both "domain" and "stablefc" are allowed to be True.
         "count" : True or False (true or false in .json format), whether to count all DSGRN parameters or shortcut at first success
+
         One can either specify posets directly, or extract posets from timeseries data.
         Include EITHER the three keys
         "timeseriesfname" : path to a file or list of files containing the time series data from which to make posets
@@ -36,23 +38,29 @@ def query(network_file,params_file,resultsdir=""):
                     '{ ("A","B","C") : [(eps11,poset11), (eps21,poset21),...], ("A","B","D") : [(eps12,poset12), (eps22,
                     poset22),...] }' (the quotes are to handle difficulties with the json format)
         This key takes specialized information and is not likely to be specified in general usage.
+
     :param resultsdir: optional path to directory where results will be written, default is current directory
 
-    :return: Writes True (pattern match for the poset) or False (no pattern match) or
-         DSGRN parameter count (# successful matches) plus the DSGRN parameter graph size for each
-         network to a dictionary keyed by network spec, which is dumped to a json file:
-         { networkspec : [(eps, result, num DSGRN params)] }.
-         When "stablefc" and "count" are both True, the number of stable full cycles is also recorded:
-         { networkspec : [(eps, result, num stable full cycles, num DSGRN params)] }
-         Separate files will be written for "domain", "stablefc", and each timeseries file name.
-         When multiple time series are specified and "count" is True, a file with the string "all" in the name will be
-         written with the aggregated results of all files.
-         This is recorded because DSGRN parameters will in general be double-counted between time series, and "all" gives the
-         number of DSGRN parameters with a match to at least one time series poset.
+    :return: Writes a .json file containing a dictionary keyed by DSGRN network specification with a list of results.
+        The results are DSGRN parameter count with successful matches, or True (existence of at least one match)
+        or False (no pattern matches exist), depending on the value of the parameter "count". The size of the DSGRN
+        parameter graph for the network and the value of 'epsilon' for the attempted match to the time series are
+        also recorded.
+        { networkspec : [(eps, result, num DSGRN params)] }.
+        When "stablefc" and "count" are both True, the number of stable full cycles is also recorded:
+        { networkspec : [(eps, result, num stable full cycles, num DSGRN params)] }
+
+        Separate files will be written for "domain", "stablefc", and each timeseries file name.
+        When multiple time series are specified and "count" is True, a file with the string "all" in the name will be
+        written with the aggregated results across time series datasets (this eliminates the double-counting of DSGRN
+        parameters that can occur across multiple time series). The file ending in "all" records the number of DSGRN
+        parameters with a match to at least one time series dataset.
     '''
 
     networks = read_networks(network_file)
     params = json.load(open(params_file))
+
+    sanity_check(params)
 
     if "posets" not in params:
         posets,networks = calculate_posets_from_multiple_time_series(params,networks)
@@ -73,7 +81,33 @@ def query(network_file,params_file,resultsdir=""):
             record_results(network_file, params_file,results,resultsdir,params)
 
 
+def sanity_check(params):
+    '''
+    Checks to be sure the correct keys are in the dictionary params.
+    :param params: dictionary
+    :return: None, errors are raised.
+    '''
+    if any(["timeseriesfname" in params, "tsfile_is_row_format" in params, "epsilons" in params]) and "posets" in params:
+        raise ValueError("Only one of 'posets' or the three keys 'timeseriesfname', 'tsfile_is_row_format' and 'epsilons' may be specified in the parameter file.")
+    if any(["timeseriesfname" in params, "tsfile_is_row_format" in params, "epsilons" in params]) and not all(["timeseriesfname" in params, "tsfile_is_row_format" in params, "epsilons" in params]):
+        raise ValueError("All of the three keys 'timeseriesfname', 'tsfile_is_row_format' and 'epsilons' must be specified in the parameter file.")
+    if not "posets" in params and not "timeseriesfname" in params:
+        raise ValueError("Either 'posets' or the three keys 'timeseriesfname', 'tsfile_is_row_format' and 'epsilons' must be specified in the parameter file.")
+    if any(["domain" not in params, "stablefc" not in params, "count" not in params]):
+        raise ValueError("All of the three keys 'domain', 'stablefc' and 'count' must be specified in the parameter file.")
+
+
+
 def search_over_networks(params,posets,N,enum_netspec):
+    '''
+    Work function for parallelization.
+    :param params: dictionary
+    :param posets: dictionary of partially ordered sets of extrema for each time series in DSGRN format, keyed by the
+            names of the genes in the time series file that are to be matched.
+    :param N: size of the parameter graph for the specified network
+    :param enum_netspec: an (integer, DSGRN network specification) pair
+    :return: (DSGRN network specification, results) pair
+    '''
     (k,netspec) = enum_netspec
     domain = params["domain"]
     stablefc = params["stablefc"]
@@ -95,6 +129,15 @@ def search_over_networks(params,posets,N,enum_netspec):
 
 
 def record_results(network_file, params_file,results,resultsdir,params):
+    '''
+    Record results in a .json file.
+    :param network_file: The input .txt file containing the list of DSGRN network specifications.
+    :param params_file: The input .json parameter file.
+    :param results: The dictionary of results.
+    :param resultsdir: The location to save the dictionary of results.
+    :param params: The dictionary of parameters generated from the .json parameter file.
+    :return: None. File is written.
+    '''
     resultsdir = create_results_folder(network_file, params_file, resultsdir)
 
     def savefile(rname,rdict):
@@ -120,8 +163,12 @@ def record_results(network_file, params_file,results,resultsdir,params):
 
 def PathMatches_with_count(network, posets, domain, stablefc):
     '''
-    Search for path matches anywhere in the domain graph.
-    :return: Integer count of parameters if count = True; if count = False return True if at least one match, False otherwise.
+    Count the number of pattern matches in the domain graph and/or stable full cycles.
+    :param network: DSGRN network object.
+    :param posets: The partially ordered sets that are to be matched at each epsilon in DSGRN format.
+    :param domain: True or False, search over whole domain graph.
+    :param stablefc: True or False search over stable full cycles only.
+    :return: dictionary of results
     '''
     if len(posets) > 1:
         totalDom= {"all": {str(eps[0]) : set() for eps in posets[next(iter(posets))]} }
@@ -161,8 +208,12 @@ def PathMatches_with_count(network, posets, domain, stablefc):
 
 def PathMatches_without_count(network, posets, domain, stablefc):
     '''
-    Search for path matches anywhere in the domain graph.
-    :return: Integer count of parameters if count = True; if count = False return True if at least one match, False otherwise.
+    Test for the existence of at least one pattern match in the domain graph and/or stable full cycles.
+    :param network: DSGRN network object.
+    :param posets: The partially ordered sets that are to be matched at each epsilon in DSGRN format.
+    :param domain: True or False, search over whole domain graph.
+    :param stablefc: True or False search over stable full cycles only.
+    :return: dictionary of results
     '''
 
     def format(numDomMatch,numFCMatch):
@@ -199,6 +250,12 @@ def PathMatches_without_count(network, posets, domain, stablefc):
 
 
 def domain_check(domaingraph,patterngraph):
+    '''
+    Check for match in domain graph for one parameter
+    :param domaingraph: DSGRN domain graph object
+    :param patterngraph: DSGRN pattern graph object
+    :return: True or False
+    '''
     ismatch = False
     searchgraph = DSGRN.SearchGraph(domaingraph)
     matchinggraph = DSGRN.MatchingGraph(searchgraph, patterngraph)
@@ -208,6 +265,12 @@ def domain_check(domaingraph,patterngraph):
 
 
 def stableFC_check(domaingraph,patterngraph):
+    '''
+    Check for match in any stable full cycle for one parameter
+    :param domaingraph: DSGRN domain graph object
+    :param patterngraph: DSGRN pattern graph object
+    :return: True or False for the existence of a match and True or False for the existence of a stable full cycle
+    '''
     FC = False
     ismatch = False
     morsedecomposition = DSGRN.MorseDecomposition(domaingraph.digraph())

@@ -17,8 +17,11 @@ def query(network_file,params_file,resultsdir=""):
                 whether to count all parameters with a match or shortcut at first success
     :param resultsdir: optional path to directory where results will be written, default is current directory
 
-    :return: Writes count of parameters with an FP match to a dictionary keyed by
-    network spec, which is dumped to a json file.
+    :return: Writes a .json file containing a dictionary keyed by DSGRN network specification with a list of results.
+        The results are DSGRN parameter count with successful matches to the fixed point bounds, or True
+        (existence of at least one match) or False (no matches exist), depending on the value of the parameter "count".
+        The size of the DSGRN parameter graph for the network is also recorded.
+        { networkspec : [result, num DSGRN params] }.
     '''
 
     networks = read_networks(network_file)
@@ -37,6 +40,14 @@ def query(network_file,params_file,resultsdir=""):
 
 
 def record_results(network_file, params_file,results,resultsdir):
+    '''
+    Record results in a .json file.
+    :param network_file: The input .txt file containing the list of DSGRN network specifications.
+    :param params_file: The input .json parameter file.
+    :param results: The dictionary of results.
+    :param resultsdir: The location to save the dictionary of results.
+    :return: None. File is written.
+    '''
     resultsdir = create_results_folder(network_file, params_file, resultsdir)
     rname = os.path.join(resultsdir,"query_results.json")
     if os.path.exists(rname):
@@ -46,17 +57,36 @@ def record_results(network_file, params_file,results,resultsdir):
 
 
 def is_FP(annotation):
+    '''
+    Specifies whether a Morse set is a fixed point.
+    :param annotation: DSGRN annotation string
+    :return: True or False
+    '''
     return annotation.startswith("FP")
 
 
 def is_FP_match(bounds_ind, annotation):
+    '''
+    Specifies whether a DSGRN fixed point satisfies the user-specified bounds on fixed point location.
+    :param bounds_ind: User-specified fixed point bounds using DSGRN indices for the variables.
+    :param annotation: DSGRN annotation string
+    :return: True or False
+    '''
     digits = [int(s) for s in annotation.replace(",", "").split() if s.isdigit()]
     return all(digits[k] >= bounds_ind[k][0] and digits[k] <= bounds_ind[k][1]
            for k in bounds_ind)
 
 
-def check_FP(bounds,count,N,tup):
-    (k, netspec) = tup
+def check_FP(bounds,count,N,enum_network):
+    '''
+    Work function for parallelization.
+    :param bounds: User-specified fixed point bounds
+    :param count: True or False, whether to count parameters or shortcut for existence only.
+    :param N: Size of the DSGRN parameter graph
+    :param enum_network: An (integer, DSGRN network specification) pair
+    :return: (DSGRN network specification, results) pair
+    '''
+    (k, netspec) = enum_network
     numparams = 0
     network = DSGRN.Network(netspec)
     bounds_ind = {network.index(str(k)): bounds[k] for k in bounds}
