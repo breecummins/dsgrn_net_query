@@ -1,9 +1,5 @@
 import DSGRN
-import os, json, sys,subprocess,progressbar,ast,shutil
-# from dsgrn_net_query.utilities.file_utilities import read_networks,create_results_folder
-# from mpi4py import MPI
-# from mpi4py.futures import MPICommExecutor
-import sqlite3
+import os, json, sys,subprocess,ast,shutil
 
 
 def query(network_file,params_file,resultsdir=""):
@@ -24,27 +20,29 @@ def query(network_file,params_file,resultsdir=""):
 
     networks = read_networks(network_file)
     params = json.load(open(params_file))
-    num_proc, count = sanity_check(params)
-
-    resultsdict = {}
-    for k,netspec in enumerate(networks):
-        netfile = "temp{}.txt".format(k)
-        dbfile = "temp{}.db".format(k)
-        with open(netfile,"w") as f:
-            f.write(netspec)
-        subprocess.check_call("mpiexec -n {} Signatures {} {}".format(num_proc,netfile,dbfile),shell=True)
-        db = DSGRN.Database(dbfile)
-        N = db.parametergraph.size()
-        matches = len(DSGRN.StableFCQuery(db).matches())
-        if count:
-            resultsdict[netspec] = (matches,N)
-        else:
-            resultsdict[netspec] = (matches > 0, N)
-        subprocess.call(["rm",netfile])
-        subprocess.call(["rm",dbfile])
-        print("Network {} of {} complete".format(k + 1, len(networks)))
-        sys.stdout.flush()
-    record_results(resultsdir,resultsdict)
+    if not networks:
+        raise ValueError("No networks available for analysis. Make sure network file is in the correct format.")
+    else:
+        num_proc, count = sanity_check(params)
+        resultsdict = {}
+        for k,netspec in enumerate(networks):
+            netfile = "temp{}.txt".format(k)
+            dbfile = "temp{}.db".format(k)
+            with open(netfile,"w") as f:
+                f.write(netspec)
+            subprocess.check_call("mpiexec -n {} Signatures {} {}".format(num_proc,netfile,dbfile),shell=True)
+            db = DSGRN.Database(dbfile)
+            N = db.parametergraph.size()
+            matches = len(DSGRN.StableFCQuery(db).matches())
+            if count:
+                resultsdict[netspec] = (matches,N)
+            else:
+                resultsdict[netspec] = (matches > 0, N)
+            subprocess.call(["rm",netfile])
+            subprocess.call(["rm",dbfile])
+            print("Network {} of {} complete".format(k + 1, len(networks)))
+            sys.stdout.flush()
+        record_results(resultsdir,resultsdict)
 
 
 def sanity_check(params):
@@ -58,8 +56,7 @@ def sanity_check(params):
     return params["num_proc"],params["count"]
 
 
-
-def record_results(resultsdir,resultsdict):
+def record_results(network_file,params_file,resultsdir,resultsdict):
     '''
     Record results in a .json file.
     :param network_file: The input .txt file containing the list of DSGRN network specifications.

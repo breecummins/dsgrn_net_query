@@ -1,7 +1,7 @@
 import DSGRN
 import json, os, sys, ast
 from functools import partial
-from dsgrn_net_query.utilities.make_posets_from_time_series import calculate_posets_from_multiple_time_series
+from dsgrn_net_query.utilities.make_posets_from_time_series import calculate_posets_from_multiple_time_series,check_posets
 from dsgrn_net_query.utilities.file_utilities import read_networks, create_results_folder
 from mpi4py import MPI
 from mpi4py.futures import MPICommExecutor
@@ -63,23 +63,18 @@ def query(network_file,params_file,resultsdir=""):
 
     sanity_check(params)
 
-    if "posets" not in params:
-        posets,networks = calculate_posets_from_multiple_time_series(params,networks)
+    posets,networks = get_posets(networks,params)
+
+    if not networks:
+        raise ValueError("No networks available for analysis. Make sure network file is in the correct format\nand make sure that every network node name is the time series data or 'poset' value.")
     else:
-        lit_posets = ast.literal_eval(params["posets"])
-        posets = {}
-        for names,pos in lit_posets.items():
-            # make sure variables are in canonical order
-            sort_names = tuple(sorted(list(names)))
-            params["timeseriesfname"] = "no_time_series_file"
-            posets[sort_names] = {"no_time_series_file" : pos}
-    work_function = partial(search_over_networks, params, posets,len(networks))
-    with MPICommExecutor(MPI.COMM_WORLD, root=0) as executor:
-        if executor is not None:
-            print("Querying networks.")
-            output=list(executor.map(work_function, enumerate(networks)))
-            results = dict(output)
-            record_results(network_file, params_file,results,resultsdir,params)
+        work_function = partial(search_over_networks, params, posets,len(networks))
+        with MPICommExecutor(MPI.COMM_WORLD, root=0) as executor:
+            if executor is not None:
+                print("Querying networks.")
+                output=list(executor.map(work_function, enumerate(networks)))
+                results = dict(output)
+                record_results(network_file, params_file,results,resultsdir,params)
 
 
 def sanity_check(params):
@@ -96,6 +91,21 @@ def sanity_check(params):
         raise ValueError("Either 'posets' or the three keys 'timeseriesfname', 'tsfile_is_row_format' and 'epsilons' must be specified in the parameter file.")
     if any(["domain" not in params, "stablefc" not in params, "count" not in params]):
         raise ValueError("All of the three keys 'domain', 'stablefc' and 'count' must be specified in the parameter file.")
+
+
+def get_posets(networks,params):
+    if "posets" not in params:
+        posets,networks = calculate_posets_from_multiple_time_series(params,networks)
+    else:
+        lit_posets = ast.literal_eval(params["posets"])
+        posets = {}
+        for names,pos in lit_posets.items():
+            # make sure variables are in canonical order
+            sort_names = tuple(sorted(list(names)))
+            params["timeseriesfname"] = "no_time_series_file"
+            posets[sort_names] = {"no_time_series_file" : pos}
+            networks = check_posets(networks,posets)
+    return posets,networks
 
 
 

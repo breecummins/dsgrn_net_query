@@ -45,16 +45,19 @@ def query(network_file,params_file,resultsdir=""):
 
     sanity_check(params)
 
-    if "hex_constraints" in params and params["hex_constraints"]:
-        work_function = partial(compute_for_network_with_constraints, params, len(networks))
+    if not networks:
+        raise ValueError("No networks available for analysis. Make sure network file is in the correct format.")
     else:
-        work_function = partial(compute_for_network_without_constraints, params, len(networks))
-    with MPICommExecutor(MPI.COMM_WORLD, root=0) as executor:
-        if executor is not None:
-            print("Querying networks.")
-            output=list(executor.map(work_function, enumerate(networks)))
-            results = dict(output)
-            record_results(network_file, params_file,results,resultsdir)
+        if "hex_constraints" in params and params["hex_constraints"]:
+            work_function = partial(compute_for_network_with_constraints, params, len(networks))
+        else:
+            work_function = partial(compute_for_network_without_constraints, params, len(networks))
+        with MPICommExecutor(MPI.COMM_WORLD, root=0) as executor:
+            if executor is not None:
+                print("Querying networks.")
+                output=list(executor.map(work_function, enumerate(networks)))
+                results = dict(output)
+                record_results(network_file, params_file,results,resultsdir)
 
 
 def sanity_check(params):

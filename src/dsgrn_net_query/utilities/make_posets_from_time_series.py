@@ -6,7 +6,7 @@ from dsgrn_net_query.utilities.file_utilities import *
 
 def calculate_poset(params, networks):
     '''
-
+    Construct partial orders of extrema from time series files
     :param params: A dictionary with the keys
                     'timeseriesfname' : a .csv or .tsv file name
                     'tsfile_is_row_format' : True if time series are in rows, False if they are in columns.
@@ -77,3 +77,20 @@ def calculate_posets_from_multiple_time_series(params,networks):
                 missing_names, len(new_networks)))
     return posets, new_networks
 
+
+def check_posets(networks,posets):
+    new_networks = []
+    missing_names = set([])
+    for networkspec in networks:
+        network = DSGRN.Network(networkspec)
+        names = tuple(sorted([network.name(k) for k in range(network.size())]))
+        poset_names = set([n for nodes in posets for n in nodes])
+        missing_names = missing_names.union(set(name for name in names if name not in poset_names))
+        if set(names).intersection(missing_names):
+            continue
+        new_networks.append(networkspec)
+    if missing_names:
+        print(
+            "No data for node(s) {} in at least one partially ordered set. \nSkipping pattern matches whenever there is a missing name.\nContinuing with {} networks.".format(
+                sorted(missing_names), len(new_networks)))
+    return new_networks

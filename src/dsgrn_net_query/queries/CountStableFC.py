@@ -24,15 +24,17 @@ def query(network_file,params_file="",resultsdir=""):
     networks = read_networks(network_file)
     params = json.load(open(params_file))
 
-    count = sanity_check(params)
-
-    work_function = partial(check_FC, count, len(networks))
-    with MPICommExecutor(MPI.COMM_WORLD, root=0) as executor:
-        if executor is not None:
-            print("Querying networks.")
-            output=list(executor.map(work_function, enumerate(networks)))
-            results = dict(output)
-            record_results(network_file,params_file,results,resultsdir)
+    if not networks:
+        raise ValueError("No networks available for analysis. Make sure network file is in the correct format.")
+    else:
+        count = sanity_check(params)
+        work_function = partial(check_FC, count, len(networks))
+        with MPICommExecutor(MPI.COMM_WORLD, root=0) as executor:
+            if executor is not None:
+                print("Querying networks.")
+                output=list(executor.map(work_function, enumerate(networks)))
+                results = dict(output)
+                record_results(network_file,params_file,results,resultsdir)
 
 
 def sanity_check(params):
