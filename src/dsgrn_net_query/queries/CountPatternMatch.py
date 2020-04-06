@@ -1,7 +1,7 @@
 import DSGRN
 import json, os, sys, ast
 from functools import partial
-from dsgrn_net_query.utilities.make_posets_from_time_series import calculate_posets_from_multiple_time_series,check_posets
+from dsgrn_net_query.utilities.poset_utilities import calculate_posets_from_multiple_time_series,check_posets
 from dsgrn_net_query.utilities.file_utilities import read_networks, create_results_folder
 from mpi4py import MPI
 from mpi4py.futures import MPICommExecutor
