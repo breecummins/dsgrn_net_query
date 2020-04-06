@@ -24,7 +24,7 @@ def query(network_file,params_file,resultsdir=""):
         raise ValueError("No networks available for analysis. Make sure network file is in the correct format.")
     else:
         num_proc, count = sanity_check(params)
-        resultsdict = {}
+        results = {}
         for k,netspec in enumerate(networks):
             netfile = "temp{}.txt".format(k)
             dbfile = "temp{}.db".format(k)
@@ -35,14 +35,14 @@ def query(network_file,params_file,resultsdir=""):
             N = db.parametergraph.size()
             matches = len(DSGRN.StableFCQuery(db).matches())
             if count:
-                resultsdict[netspec] = (matches,N)
+                results[netspec] = (matches,N)
             else:
-                resultsdict[netspec] = (matches > 0, N)
+                results[netspec] = (matches > 0, N)
             subprocess.call(["rm",netfile])
             subprocess.call(["rm",dbfile])
             print("Network {} of {} complete".format(k + 1, len(networks)))
             sys.stdout.flush()
-        record_results(resultsdir,resultsdict)
+        record_results(network_file,params_file,results,resultsdir)
 
 
 def sanity_check(params):
@@ -56,7 +56,7 @@ def sanity_check(params):
     return params["num_proc"],params["count"]
 
 
-def record_results(network_file,params_file,resultsdir,resultsdict):
+def record_results(network_file,params_file,results,resultsdir):
     '''
     Record results in a .json file.
     :param network_file: The input .txt file containing the list of DSGRN network specifications.
@@ -69,7 +69,7 @@ def record_results(network_file,params_file,resultsdir,resultsdict):
     rname = os.path.join(resultsdir,"query_results.json")
     if os.path.exists(rname):
         os.rename(rname,rname+".old")
-    json.dump(resultsdict,open(rname,'w'))
+    json.dump(results,open(rname,'w'))
     print(resultsdir)
 
 
