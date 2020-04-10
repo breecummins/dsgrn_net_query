@@ -28,7 +28,7 @@ def test_multistability():
     qdir = subprocess.check_output("tail -n 1 dsgrn_net_query.log",shell=True).strip().decode("utf-8")
     output_file = os.path.join(qdir,"query_results.json")
     results = json.load(open(output_file))
-    assert(results == {'inducer1 : (inducer1) : E\ninducer2 : (inducer2) : E\nreporter : (x3) : E\nx1 : (~inducer1)(~x2) : E\nx2 : (x3)(~inducer2) : E\nx3 : (x2) : E\nD : (D + reporter) : E': [64, 448]})
+    assert(results == {"inducer1 : (inducer1) : E\ninducer2 : (inducer2) : E\nreporter : (~x3) : E\nx1 : (x2)(~inducer1) : E\nx2 : (inducer2) : E\nx3 : (x1 + x3) : E\nD : (D + reporter) : E": [48, 224]})
 
 
 
@@ -38,7 +38,7 @@ def test_multistability2():
     qdir = subprocess.check_output("tail -n 1 dsgrn_net_query.log",shell=True).strip().decode("utf-8")
     output_file = os.path.join(qdir,"query_results.json")
     results = json.load(open(output_file))
-    assert(results == {'inducer1 : (inducer1) : E\ninducer2 : (inducer2) : E\nreporter : (x3) : E\nx1 : (~inducer1)(~x2) : E\nx2 : (x3)(~inducer2) : E\nx3 : (x2) : E\nD : (D + reporter) : E': [True, 448]})
+    assert(results == {"inducer1 : (inducer1) : E\ninducer2 : (inducer2) : E\nreporter : (~x3) : E\nx1 : (x2)(~inducer1) : E\nx2 : (inducer2) : E\nx3 : (x1 + x3) : E\nD : (D + reporter) : E": [True, 224]})
     subprocess.call(["rm","-r", "temp_results/"])
 
 

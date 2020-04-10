@@ -1,2 +1,2 @@
-["inducer1 : (inducer1) : E\ninducer2 : (inducer2) : E\nreporter : (x3) : E\nx1 : (~inducer1)(~x2) : E\nx2 : (x3)(~inducer2) : E\nx3 : (x2) : E\nD : (D + reporter) : E"]
+["inducer1 : (inducer1) : E\ninducer2 : (inducer2) : E\nreporter : (~x3) : E\nx1 : (x2)(~inducer1) : E\nx2 : (inducer2) : E\nx3 : (x1 + x3) : E\nD : (D + reporter) : E"]
 
