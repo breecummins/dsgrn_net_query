@@ -20,6 +20,7 @@ def test_stableFP2():
     output_file = os.path.join(qdir,"query_results.json")
     results = json.load(open(output_file))
     assert(results == {'X1 : (X1)(~X3) : E\nX2 : (~X1) : E\nX3 : (X1 + X2) : E\n': [True, 168], 'X1 : (X1)(~X3) : E\nX2 : (X1) : E\nX3 : (X1 + X2) : E\n': [True, 168], 'X1 : (X1 + X2) : E\nX2 : (~X3) : E\nX3 : (X2) : E\n': [False, 4]})
+    time.sleep(1)
 
 
 def test_multistability():
@@ -29,6 +30,7 @@ def test_multistability():
     output_file = os.path.join(qdir,"query_results.json")
     results = json.load(open(output_file))
     assert(results == {"inducer1 : (inducer1) : E\ninducer2 : (inducer2) : E\nreporter : (~x3) : E\nx1 : (x2)(~inducer1) : E\nx2 : (inducer2) : E\nx3 : (x1 + x3) : E\nD : (D + reporter) : E": [48, 224]})
+    time.sleep(1)
 
 
 
@@ -43,4 +45,4 @@ def test_multistability2():
 
 
 if __name__ == "__main__":
-    test_multistability()
+    test_multistability2()

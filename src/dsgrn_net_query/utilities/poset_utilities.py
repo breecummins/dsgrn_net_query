@@ -1,7 +1,7 @@
 import DSGRN
-from min_interval_posets import curve
-from min_interval_posets import posets as make_posets
-from dsgrn_net_query.utilities.file_utilities import *
+from min_interval_posets.curve import Curve
+from min_interval_posets.posets import eps_posets
+from dsgrn_net_query.utilities.file_utilities import readcol,readrow
 
 
 def calculate_poset(params, networks):
@@ -29,8 +29,8 @@ def calculate_poset(params, networks):
         if set(names).intersection(missing_names):
             continue
         if names not in posets.keys():
-            curves = [curve.Curve(data[name], times, True) for name in names]
-            pos = make_posets.eps_posets(dict(zip(names, curves)), params["epsilons"])
+            curves = [Curve(data[name], times, True) for name in names]
+            pos = eps_posets(dict(zip(names, curves)), params["epsilons"])
             if pos is None:
                 raise ValueError("poset is None!")
             posets[names] = pos
