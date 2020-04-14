@@ -174,7 +174,6 @@ def record_results(network_file, params_file,results,resultsdir,params):
         ts = key[1].split("/")[-1].split(".")[0]
         rname = os.path.join(resultsdir, "query_results_{}_{}.json".format(key[0], ts))
         savefile(rname,dict(list_of_tup))
-    print(resultsdir)
 
 
 def PathMatches_with_count(network, posets, domain, stablefc):
