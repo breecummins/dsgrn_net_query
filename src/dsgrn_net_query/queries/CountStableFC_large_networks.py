@@ -97,7 +97,7 @@ def read_networks(network_file):
     return networks
 
 
-def create_results_folder(network_file, params_file, resultsdir):
+def create_results_folder(network_file, params_file, resultsdir,datetime):
     '''
     NOTE: Forced to copy from file_utilities due to collision between import of MPI and the mpiexec call inside this file.
 
@@ -107,7 +107,8 @@ def create_results_folder(network_file, params_file, resultsdir):
     :param resultsdir: optional path to directory where results will be written
     :return: string containing path to date-time stamped directory to save results file
     '''
-    datetime = subprocess.check_output(['date +%Y_%m_%d_%H_%M_%S'], shell=True).decode(sys.stdout.encoding).strip()
+    if datetime is None:
+        datetime = subprocess.check_output(['date +%Y_%m_%d_%H_%M_%S'], shell=True).decode(sys.stdout.encoding).strip()
     dirname = os.path.join(os.path.expanduser(resultsdir), "dsgrn_net_query_results" + datetime)
     queriesdir = os.path.join(dirname, "queries" + datetime)
     os.makedirs(queriesdir)

@@ -153,7 +153,7 @@ def record_results(network_file, params_file,results,resultsdir,params):
     if "datetime" in params:
         resultsdir = create_results_folder(network_file, params_file, resultsdir,params["datetime"])
     else:
-        resultsdir = create_results_folder(network_file, params_file, resultsdir,params["datetime"])
+        resultsdir = create_results_folder(network_file, params_file, resultsdir)
 
     def savefile(rname,rdict):
         if os.path.exists(rname):

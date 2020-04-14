@@ -1,10 +1,10 @@
 import subprocess,json,os,time
 from pathlib import Path
 
-Path("temp_results").mkdir(exist_ok=True)
 
 
 def test_patternmatch():
+    Path("temp_results").mkdir(exist_ok=True)
     command = " ".join(["mpiexec", "-n", "2", "python", "../src/dsgrn_net_query/queries/CountPatternMatch.py", "mpi_networks_pm.txt", "mpi_params_pm.json", "temp_results",">dsgrn_net_query.log","2>&1"])
     os.system(command)
     qdir = subprocess.check_output("tail -n 1 dsgrn_net_query.log",shell=True).strip().decode("utf-8")
@@ -30,10 +30,12 @@ def test_patternmatch():
                         'SWI4 : (NDD1)(~YOX1) : E\nHCM1 : SWI4 : E\nNDD1 : HCM1 : E\nYOX1 : SWI4 : E': [[0.0, 0, 2, 14], [0.01, 0, 2, 14], [0.05, 0, 2, 14]]})
     assert(results5==results1)
     assert(results6==results2)
+    subprocess.call(["rm","-r", "temp_results/"])
 
 
 
 def test_patternmatch2():
+    Path("temp_results").mkdir(exist_ok=True)
     command = " ".join(["mpiexec", "-n", "2", "python", "../src/dsgrn_net_query/queries/CountPatternMatch.py", "mpi_networks_pm.txt", "mpi_params_pm2.json", "temp_results",">dsgrn_net_query.log","2>&1"])
     os.system(command)
     qdir = subprocess.check_output("tail -n 1 dsgrn_net_query.log",shell=True).strip().decode("utf-8")
@@ -53,9 +55,11 @@ def test_patternmatch2():
                         'SWI4 : (NDD1)(~YOX1) : E\nHCM1 : SWI4 : E\nNDD1 : HCM1 : E\nYOX1 : SWI4 : E': [[0.0, False, 14], [0.01, False, 14], [0.05, False, 14]]})
     assert(results4 == {'SWI4 : (NDD1)(~YOX1) : E\nHCM1 : SWI4 : E\nNDD1 : HCM1 : E\nYOX1 : NDD1 : E': [[0.0, False, 4], [0.01, False, 4], [0.05, False, 4]],
                         'SWI4 : (NDD1)(~YOX1) : E\nHCM1 : SWI4 : E\nNDD1 : HCM1 : E\nYOX1 : SWI4 : E': [[0.0, False, 14], [0.01, False, 14], [0.05, False, 14]]})
+    subprocess.call(["rm","-r", "temp_results/"])
 
 
 def test_patternmatch3():
+    Path("temp_results").mkdir(exist_ok=True)
     command = " ".join(["mpiexec", "-n", "2", "python", "../src/dsgrn_net_query/queries/CountPatternMatch.py", "networks_stable_X1X2X3.txt", "params_patternmatch_stable_X1X2X3.json", "temp_results",">dsgrn_net_query.log","2>&1"])
     os.system(command)
     qdir = subprocess.check_output("tail -n 1 dsgrn_net_query.log",shell=True).strip().decode("utf-8")
