@@ -22,6 +22,7 @@ def query(network_file,params_file,resultsdir=""):
         "stablefc" : True or False (true or false in .json format), whether or not to perform a path search within stable full cycles
         Both "domain" and "stablefc" are allowed to be True.
         "count" : True or False (true or false in .json format), whether to count all DSGRN parameters or shortcut at first success
+        "datetime" : optional datetime string to append to subdirectories in resultsdir, default = system time
 
         One can either specify posets directly, or extract posets from timeseries data.
         Include EITHER the three keys
@@ -149,7 +150,10 @@ def record_results(network_file, params_file,results,resultsdir,params):
     :param params: The dictionary of parameters generated from the .json parameter file.
     :return: None. File is written.
     '''
-    resultsdir = create_results_folder(network_file, params_file, resultsdir)
+    if "datetime" in params:
+        resultsdir = create_results_folder(network_file, params_file, resultsdir,params["datetime"])
+    else:
+        resultsdir = create_results_folder(network_file, params_file, resultsdir,params["datetime"])
 
     def savefile(rname,rdict):
         if os.path.exists(rname):
@@ -167,7 +171,8 @@ def record_results(network_file, params_file,results,resultsdir,params):
                     else:
                         reparse[key] = [(netspec,rlist)]
     for key,list_of_tup in reparse.items():
-        rname = os.path.join(resultsdir, "query_results_{}_{}.json".format(key[0], key[1].split(".")[0]))
+        ts = key[1].split("/")[-1].split(".")[0]
+        rname = os.path.join(resultsdir, "query_results_{}_{}.json".format(key[0], ts))
         savefile(rname,dict(list_of_tup))
     print(resultsdir)
 

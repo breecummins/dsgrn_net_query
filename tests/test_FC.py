@@ -45,4 +45,4 @@ def test_count_stableFC_no_count():
 
 
 if __name__ == "__main__":
-    test_count_stableFC()
+    test_count_stableFCln()

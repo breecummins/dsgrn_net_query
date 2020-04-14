@@ -71,15 +71,17 @@ def read_networks(network_object):
     return networks
 
 
-def create_results_folder(network_file, params_file, resultsdir):
+def create_results_folder(network_file, params_file, resultsdir, datetime=None):
     '''
     Create a date-time stamped folder to save results. Copy over input files.
     :param network_file: a .txt file containing either a single DSGRN network specification or a list of network specification strings in DSGRN format
     :param params_file: A .json file containing a parameter dictionary
     :param resultsdir: path to directory where results will be written
+    :param datetime: optional datetime string, default = system time
     :return: string containing path to date-time stamped directory to save results file
     '''
-    datetime = subprocess.check_output(['date +%Y_%m_%d_%H_%M_%S'], shell=True).decode(sys.stdout.encoding).strip()
+    if datetime is None:
+        datetime = subprocess.check_output(['date +%Y_%m_%d_%H_%M_%S'], shell=True).decode(sys.stdout.encoding).strip()
     dirname = os.path.join(os.path.expanduser(resultsdir), "dsgrn_net_query_results" + datetime)
     queriesdir = os.path.join(dirname, "queries" + datetime)
     os.makedirs(queriesdir)

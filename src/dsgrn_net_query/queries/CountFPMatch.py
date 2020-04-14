@@ -25,6 +25,8 @@ def query(network_file,params_file,resultsdir=""):
                     the count is just the number of parameters with at least one fixed point.
                     "count" : True or False (true or false in .json format);
                     whether to count all parameters with a match or shortcut at first success
+                    "datetime" : optional datetime string to append to subdirectories in resultsdir, default = system time
+
     :param resultsdir: optional path to directory where results will be written, default is current directory
 
     :return: Writes a .json file containing a dictionary keyed by DSGRN network specification with a list of results.
@@ -39,6 +41,7 @@ def query(network_file,params_file,resultsdir=""):
 
     networks = read_networks(network_file)
     params = json.load(open(params_file))
+    datetime = None if "datetime" not in params else params["datetime"]
 
     sanity_check(params)
 
@@ -51,7 +54,7 @@ def query(network_file,params_file,resultsdir=""):
                 print("Querying networks.")
                 output=list(executor.map(work_function, enumerate(networks)))
                 results = dict(output)
-                record_results(network_file, params_file,results,resultsdir)
+                record_results(network_file, params_file,results,resultsdir,datetime)
 
 
 def sanity_check(params):
@@ -64,16 +67,17 @@ def sanity_check(params):
         raise ValueError("The parameter file must contain keys 'included_bounds', 'excluded_bounds', and 'count'.")
 
 
-def record_results(network_file, params_file,results,resultsdir):
+def record_results(network_file, params_file,results,resultsdir,datetime):
     '''
     Record results in a .json file.
     :param network_file: The input .txt file containing the list of DSGRN network specifications.
     :param params_file: The input .json parameter file.
     :param results: The dictionary of results.
     :param resultsdir: The location to save the dictionary of results.
+    :param datetime: None or string with datetime
     :return: None. File is written.
     '''
-    resultsdir = create_results_folder(network_file, params_file, resultsdir)
+    resultsdir = create_results_folder(network_file, params_file, resultsdir,datetime)
     rname = os.path.join(resultsdir,"query_results.json")
     if os.path.exists(rname):
         os.rename(rname,rname+".old")
