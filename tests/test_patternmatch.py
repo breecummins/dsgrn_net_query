@@ -1,7 +1,7 @@
-import subprocess,json,os,time
+import subprocess,json,os,time,shutil
 from pathlib import Path
 
-
+shutil.rmtree('temp_results', ignore_errors=True)
 
 def test_patternmatch():
     Path("temp_results").mkdir(exist_ok=True)
