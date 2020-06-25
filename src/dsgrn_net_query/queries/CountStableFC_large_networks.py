@@ -30,6 +30,8 @@ def query(network_file,params_file,resultsdir=""):
         for k,netspec in enumerate(networks):
             netfile = "temp{}.txt".format(k)
             dbfile = "temp{}.db".format(k)
+            if os.path.exists(dbfile):
+                os.remove(dbfile)
             with open(netfile,"w") as f:
                 f.write(netspec)
             subprocess.check_call("mpiexec -n {} Signatures {} {}".format(num_proc,netfile,dbfile),shell=True)
