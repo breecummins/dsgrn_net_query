@@ -67,7 +67,8 @@ def query(network_file,params_file,resultsdir=""):
     posets,networks = get_posets(networks,params)
 
     if not networks:
-        raise ValueError("No networks available for analysis. Make sure network file is in the correct format\nand make sure that every network node name is the time series data or 'poset' value.")
+        print("No networks available for analysis. Make sure network file is in the correct format\nand make sure that every network node name is the time series data or 'poset' value.")
+        return None
     else:
         work_function = partial(search_over_networks, params, posets,len(networks))
         with MPICommExecutor(MPI.COMM_WORLD, root=0) as executor:
