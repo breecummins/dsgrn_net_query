@@ -73,7 +73,7 @@ def query(network_file,params_file,resultsdir=""):
         print("Querying networks.")
         results = {}
         if param_dict["count"]:
-            for spec in networks:
+            for k,spec in enumerate(networks):
                 results[spec] = {}
                 network = DSGRN.Network(spec)
                 param_graph = DSGRN.ParameterGraph(network)
