@@ -3,7 +3,6 @@ import json, os, sys, ast
 from functools import partial
 from dsgrn_net_query.utilities.poset_utilities import calculate_posets_from_multiple_time_series,check_posets
 from dsgrn_net_query.utilities.file_utilities import read_networks, create_results_folder
-from mpi4py import MPI
 from mpi4py.futures import MPICommExecutor
 
 
@@ -22,6 +21,7 @@ def query(network_file,params_file,resultsdir=""):
         "stablefc" : True or False (true or false in .json format), whether or not to perform a path search within stable full cycles
         Both "domain" and "stablefc" are allowed to be True.
         "count" : True or False (true or false in .json format), whether to count all DSGRN parameters or shortcut at first success
+            NOTE: Only count = True is currently implemented
         "datetime" : optional datetime string to append to subdirectories in resultsdir, default = system time
 
         One can either specify posets directly, or extract posets from timeseries data.
@@ -65,49 +65,29 @@ def query(network_file,params_file,resultsdir=""):
     sanity_check(param_dict)
 
     posets,networks = get_posets(networks,param_dict)
+    print("Querying networks.")
 
     if not networks:
         print("No networks available for analysis. Make sure network file is in the correct format\nand make sure that every network node name is the time series data or 'poset' value.")
         return None
     else:
-        print("Querying networks.")
         results = {}
         if param_dict["count"]:
-            for k,spec in enumerate(networks):
-                results[spec] = {}
-                network = DSGRN.Network(spec)
-                param_graph = DSGRN.ParameterGraph(network)
-                N = param_graph.size()
-                eps = param_dict["epsilons"]
-                names = tuple(sorted([network.name(k) for k in range(network.size())]))
-                work_function = partial(PathMatch, network, posets[names], param_dict["domain"], param_dict["stablefc"])
-                with MPICommExecutor(MPI.COMM_WORLD, root=0) as executor:
-                    if executor is not None:
-                        output=list(executor.map(work_function, [param_graph.parameter(p) for p in range(N)]))
-                        tsdict = {tsfile: {} for tsfile, _ in posets[names].items()}
-                        for tsfile in tsdict:
-                            results[spec][tsfile] = {}
-                            domain_match = [0]*len(eps)
-                            stablefc = 0
-                            stablefc_match = [0]*len(eps)
-                            for data in output:
-                                if param_dict["domain"]:
-                                    for k,e in enumerate(data["domain"]):
-                                        domain_match[k] += e
-                                if param_dict["stablefc"]:
-                                    stablefc += data["stablefc"]
-                                    for k,e in enumerate(data["match"]):
-                                        stablefc_match[k] += e
-                            if param_dict["domain"]:
-                                results[spec][tsfile]["domain"] = list(zip(eps,domain_match,[N]*len(eps)))
-                            if param_dict["stablefc"]:
-                                results[spec][tsfile]["stablefc"] = list(zip(eps,stablefc_match,[stablefc]*len(eps),[N]*len(eps)))
-                print("Network {} of {} complete.".format(k + 1, N))
-                sys.stdout.flush()
-            record_results(network_file, params_file,results,resultsdir,param_dict)
+            with MPICommExecutor() as executor:
+                for k,spec in enumerate(networks):
+                    results[spec] = {}
+                    network = DSGRN.Network(spec)
+                    param_graph = DSGRN.ParameterGraph(network)
+                    dsgrn_params = [(p,param_graph.parameter(p)) for p in range(param_graph.size())]
+                    names = tuple(sorted([network.name(k) for k in range(network.size())]))
+                    work_function = partial(PathMatch, network, posets[names], param_dict["domain"], param_dict["stablefc"])
+                    output=dict(executor.map(work_function, dsgrn_params))
+                    results[spec] = reformat_output(output, list(posets[names].keys()), param_dict, param_graph.size())
+                    print("Network {} of {} complete.".format(k + 1, len(networks)))
+                    sys.stdout.flush()
+                record_results(network_file, params_file, results, resultsdir, param_dict)
         else:
             raise ValueError("Existence of path match without counting is not yet implemented for large networks. Use CountPatternMatch.py.")
-
 
 
 def sanity_check(params):
@@ -136,8 +116,11 @@ def get_posets(networks,params):
             # make sure variables are in canonical order
             sort_names = tuple(sorted(list(names)))
             params["timeseriesfname"] = "no_time_series_file"
-            posets[sort_names] = {"no_time_series_file" : pos}
+            posets[sort_names] = {"no_time_series_file" : sorted(pos)}
             networks = check_posets(networks,posets)
+            if "epsilons" not in params:
+                # side effect on parameter dictionary
+                params["epsilons"] = sorted([eps for eps,_ in pos])
     return posets,networks
 
 
@@ -151,6 +134,7 @@ def record_results(network_file, params_file,results,resultsdir,params):
     :param params: The dictionary of parameters generated from the .json parameter file.
     :return: None. File is written.
     '''
+    print(results)
     if "datetime" in params:
         resultsdir = create_results_folder(network_file, params_file, resultsdir,params["datetime"])
     else:
@@ -178,35 +162,80 @@ def record_results(network_file, params_file,results,resultsdir,params):
     print(resultsdir)
 
 
-def PathMatch(network,dsgrn_param, posets, domain, stablefc):
+def reformat_output(output, tsfiles, param_dict, pgsize):
+        ts_keys = tsfiles[:]
+        if len(tsfiles) > 1:
+            ts_keys += ["all"]
+            all_match = {}
+        domain_bool = param_dict["domain"]
+        stablefc_bool = param_dict["stablefc"]
+        eps = param_dict["epsilons"]
+        res = {}
+        if domain_bool:
+            res["domain"] = dict.fromkeys(ts_keys, {})
+            if len(tsfiles) > 1:
+                all_match["domain"] = {e: set([]) for e in eps}
+        if stablefc_bool:
+            res["stablefc"] = dict.fromkeys(ts_keys, {})
+            if len(tsfiles) > 1:
+                all_match["stablefc"] = {e: set([]) for e in eps}
+        for tsfile in tsfiles:
+            domain_match = dict.fromkeys(eps, 0)
+            stablefc = 0
+            stablefc_match = dict.fromkeys(eps, 0)
+            for param_index, data in output.items():
+                if domain_bool:
+                    for e, b in data["domain"][tsfile].items():
+                        domain_match[e] += b
+                        if len(tsfiles) > 1 and b:
+                            all_match["domain"][e].add(param_index)
+                if stablefc_bool:
+                    stablefc += data["stablefc"]
+                    for e, b in data["match"][tsfile].items():
+                        stablefc_match[e] += b
+                        if len(tsfiles) > 1 and b:
+                            all_match["stablefc"][e].add(param_index)
+            if domain_bool:
+                res["domain"][tsfile] = [d + [pgsize] for d in sorted([list(m) for m in domain_match.items()])]
+            if stablefc_bool:
+                res["stablefc"][tsfile] = [d + [stablefc, pgsize] for d in sorted([list(m) for m in stablefc_match.items()])]
+        if len(tsfiles) > 1:
+            if domain_bool:
+                res["domain"]["all"] = sorted([[e, len(plist), pgsize] for e, plist in all_match["domain"].items()])
+            if stablefc_bool:
+                res["stablefc"]["all"] = sorted([[e, len(plist), stablefc, pgsize] for e, plist in all_match["stablefc"].items()])
+        return res
+
+
+def PathMatch(network, posets, domain, stablefc,dsgrn_param):
     '''
     Test for the existence of at least one pattern match in the domain graph and/or stable full cycles.
     :param network: DSGRN.Network object
-    :param dsgrn_param: DSGRN.Parameter object.
+    :param dsgrn_params: list of tuples of parameter indices and DSGRN.Parameter objects.
     :param posets: The partially ordered sets that are to be matched at each epsilon in DSGRN format.
     :param domain: True or False, search over whole domain graph.
     :param stablefc: True or False search over stable full cycles only.
     :return: {"domain" : {tsfile : {str(eps) : True or False}}, "match" : {tsfile : {str(eps) : True or False}, "stablefc" : True or False}
     '''
-
+    param_index,param = dsgrn_param
     DomMatch = { tsfile : {} for tsfile,_ in posets.items()}
     FCMatch = { tsfile : {} for tsfile,_ in posets.items()}
     FC = False
-    domaingraph = DSGRN.DomainGraph(dsgrn_param)
+    domaingraph = DSGRN.DomainGraph(param)
     for tsfile, poset_list in posets.items():
         for (eps, (events, event_ordering)) in poset_list:
             patterngraph = DSGRN.PatternGraph(DSGRN.PosetOfExtrema(network,events,event_ordering))
             if domain:
-                DomMatch[tsfile][str(eps)] = domain_check(domaingraph,patterngraph)
+                DomMatch[tsfile][eps] = domain_check(domaingraph,patterngraph)
             if stablefc:
-                FCMatch[tsfile][str(eps)], FC = stableFC_check(domaingraph,patterngraph)
+                FCMatch[tsfile][eps], FC = stableFC_check(domaingraph,patterngraph)
     results = {}
     if domain:
         results["domain"] = DomMatch
     if stablefc:
         results["stablefc"] = FC
         results["match"] = FCMatch
-    return results
+    return (param_index,results)
 
 
 def domain_check(domaingraph,patterngraph):

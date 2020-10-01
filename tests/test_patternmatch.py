@@ -103,28 +103,28 @@ def test_patternmatch_ln():
 
 
 
-def test_patternmatch_ln2():
-    Path("temp_results").mkdir(exist_ok=True)
-    command = " ".join(["mpiexec", "-n", "2", "python", "../src/dsgrn_net_query/queries/CountPatternMatch_large_networks.py", "mpi_networks_pm.txt", "mpi_params_pm2.json", "temp_results",">dsgrn_net_query.log","2>&1"])
-    os.system(command)
-    qdir = subprocess.check_output("tail -n 1 dsgrn_net_query.log",shell=True).strip().decode("utf-8")
-    output_file1 = os.path.join(qdir,"query_results_domain_wt1_microarray_coregenes_lifepoints_interpol_trim.json")
-    output_file2 = os.path.join(qdir,"query_results_stablefc_wt1_microarray_coregenes_lifepoints_interpol_trim.json")
-    output_file3 = os.path.join(qdir,"query_results_domain_wt_rnaseq_ts.json")
-    output_file4 = os.path.join(qdir,"query_results_stablefc_wt_rnaseq_ts.json")
-    results1 = json.load(open(output_file1))
-    results2 = json.load(open(output_file2))
-    results3 = json.load(open(output_file3))
-    results4 = json.load(open(output_file4))
-    assert(results1 == {"SWI4 : (NDD1)(~YOX1) : E\nHCM1 : SWI4 : E\nNDD1 : HCM1 : E\nYOX1 : SWI4 : E": [[0.0, False, 14], [0.01, True, 14], [0.05, True, 14]],
-                        "SWI4 : (NDD1)(~YOX1) : E\nHCM1 : SWI4 : E\nNDD1 : HCM1 : E\nYOX1 : NDD1 : E": [[0.0, False, 4], [0.01, False, 4], [0.05, True, 4]]})
-    assert(results2 == {"SWI4 : (NDD1)(~YOX1) : E\nHCM1 : SWI4 : E\nNDD1 : HCM1 : E\nYOX1 : SWI4 : E": [[0.0, False, 14], [0.01, True, 14], [0.05,True, 14]],
-                        "SWI4 : (NDD1)(~YOX1) : E\nHCM1 : SWI4 : E\nNDD1 : HCM1 : E\nYOX1 : NDD1 : E": [[0.0, False, 4], [0.01, False, 4], [0.05, False, 4]]})
-    assert(results3 == {'SWI4 : (NDD1)(~YOX1) : E\nHCM1 : SWI4 : E\nNDD1 : HCM1 : E\nYOX1 : NDD1 : E': [[0.0, False, 4], [0.01, False, 4], [0.05, False, 4]],
-                        'SWI4 : (NDD1)(~YOX1) : E\nHCM1 : SWI4 : E\nNDD1 : HCM1 : E\nYOX1 : SWI4 : E': [[0.0, False, 14], [0.01, False, 14], [0.05, False, 14]]})
-    assert(results4 == {'SWI4 : (NDD1)(~YOX1) : E\nHCM1 : SWI4 : E\nNDD1 : HCM1 : E\nYOX1 : NDD1 : E': [[0.0, False, 4], [0.01, False, 4], [0.05, False, 4]],
-                        'SWI4 : (NDD1)(~YOX1) : E\nHCM1 : SWI4 : E\nNDD1 : HCM1 : E\nYOX1 : SWI4 : E': [[0.0, False, 14], [0.01, False, 14], [0.05, False, 14]]})
-    subprocess.call(["rm","-r", "temp_results/"])
+# def test_patternmatch_ln2():
+#     Path("temp_results").mkdir(exist_ok=True)
+#     command = " ".join(["mpiexec", "-n", "2", "python", "../src/dsgrn_net_query/queries/CountPatternMatch_large_networks.py", "mpi_networks_pm.txt", "mpi_params_pm2.json", "temp_results",">dsgrn_net_query.log","2>&1"])
+#     os.system(command)
+#     qdir = subprocess.check_output("tail -n 1 dsgrn_net_query.log",shell=True).strip().decode("utf-8")
+#     output_file1 = os.path.join(qdir,"query_results_domain_wt1_microarray_coregenes_lifepoints_interpol_trim.json")
+#     output_file2 = os.path.join(qdir,"query_results_stablefc_wt1_microarray_coregenes_lifepoints_interpol_trim.json")
+#     output_file3 = os.path.join(qdir,"query_results_domain_wt_rnaseq_ts.json")
+#     output_file4 = os.path.join(qdir,"query_results_stablefc_wt_rnaseq_ts.json")
+#     results1 = json.load(open(output_file1))
+#     results2 = json.load(open(output_file2))
+#     results3 = json.load(open(output_file3))
+#     results4 = json.load(open(output_file4))
+#     assert(results1 == {"SWI4 : (NDD1)(~YOX1) : E\nHCM1 : SWI4 : E\nNDD1 : HCM1 : E\nYOX1 : SWI4 : E": [[0.0, False, 14], [0.01, True, 14], [0.05, True, 14]],
+#                         "SWI4 : (NDD1)(~YOX1) : E\nHCM1 : SWI4 : E\nNDD1 : HCM1 : E\nYOX1 : NDD1 : E": [[0.0, False, 4], [0.01, False, 4], [0.05, True, 4]]})
+#     assert(results2 == {"SWI4 : (NDD1)(~YOX1) : E\nHCM1 : SWI4 : E\nNDD1 : HCM1 : E\nYOX1 : SWI4 : E": [[0.0, False, 14], [0.01, True, 14], [0.05,True, 14]],
+#                         "SWI4 : (NDD1)(~YOX1) : E\nHCM1 : SWI4 : E\nNDD1 : HCM1 : E\nYOX1 : NDD1 : E": [[0.0, False, 4], [0.01, False, 4], [0.05, False, 4]]})
+#     assert(results3 == {'SWI4 : (NDD1)(~YOX1) : E\nHCM1 : SWI4 : E\nNDD1 : HCM1 : E\nYOX1 : NDD1 : E': [[0.0, False, 4], [0.01, False, 4], [0.05, False, 4]],
+#                         'SWI4 : (NDD1)(~YOX1) : E\nHCM1 : SWI4 : E\nNDD1 : HCM1 : E\nYOX1 : SWI4 : E': [[0.0, False, 14], [0.01, False, 14], [0.05, False, 14]]})
+#     assert(results4 == {'SWI4 : (NDD1)(~YOX1) : E\nHCM1 : SWI4 : E\nNDD1 : HCM1 : E\nYOX1 : NDD1 : E': [[0.0, False, 4], [0.01, False, 4], [0.05, False, 4]],
+#                         'SWI4 : (NDD1)(~YOX1) : E\nHCM1 : SWI4 : E\nNDD1 : HCM1 : E\nYOX1 : SWI4 : E': [[0.0, False, 14], [0.01, False, 14], [0.05, False, 14]]})
+#     subprocess.call(["rm","-r", "temp_results/"])
 
 
 def test_patternmatch_ln3():
@@ -141,4 +141,4 @@ def test_patternmatch_ln3():
     subprocess.call(["rm","-r", "temp_results/"])
 
 if __name__ == "__main__":
-    test_patternmatch_ln()
+    test_patternmatch_ln3()
