@@ -47,7 +47,7 @@ All functions create a unique date-time stamped folder in which to store results
 
 # Inputs 
 
-`querymodule.py`           =   any module in dsgrn_net_query/queries; currently the following queries are available: CountFPMatch.py CountStableFC.py, CountStableFC_large_networks.py, and CountPatternMatch.py.
+`querymodule.py`           =   any module in dsgrn_net_query/queries; currently the following queries are available: `CountFPMatch.py`, `CountStableFC.py`, `CountStableFC_large_networks.py`, `CountPatternMatch.py`, and `CountPatternMatch_large_networks.py`.
 
 `networks_file.txt`         =   path to a `.txt` file containing either a single DSGRN network specification
                             or a list of them (comma-separated and surrounded by square
