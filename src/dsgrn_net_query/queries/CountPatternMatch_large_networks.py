@@ -65,7 +65,7 @@ def query(network_file,params_file,resultsdir=""):
     sanity_check(param_dict)
 
     posets,networks = get_posets(networks,param_dict)
-    print("Querying networks.")
+    print("Querying networks.\n")
 
     if not networks:
         print("No networks available for analysis. Make sure network file is in the correct format\nand make sure that every network node name is the time series data or 'poset' value.")
