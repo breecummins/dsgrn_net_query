@@ -134,7 +134,6 @@ def record_results(network_file, params_file,results,resultsdir,params):
     :param params: The dictionary of parameters generated from the .json parameter file.
     :return: None. File is written.
     '''
-    print(results)
     if "datetime" in params:
         resultsdir = create_results_folder(network_file, params_file, resultsdir,params["datetime"])
     else:
@@ -159,7 +158,7 @@ def record_results(network_file, params_file,results,resultsdir,params):
         ts = key[1].split("/")[-1].split(".")[0]
         rname = os.path.join(resultsdir, "query_results_{}_{}.json".format(key[0], ts))
         savefile(rname,dict(list_of_tup))
-    print(resultsdir)
+    open(".query_results.log","w").write(resultsdir)
 
 
 def reformat_output(output, tsfiles, param_dict, pgsize):
