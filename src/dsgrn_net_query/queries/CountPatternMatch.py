@@ -281,6 +281,29 @@ def domain_check(domaingraph,patterngraph):
     return ismatch
 
 
+# def stableFC_check_buggy(domaingraph,patterngraph,paramind):
+#     # Note: morsegraph.poset().stringify != morsedecomposition.poset().stringify in all cases.
+#     '''
+#     Check for match in any stable full cycle for one parameter
+#     :param domaingraph: DSGRN domain graph object
+#     :param patterngraph: DSGRN pattern graph object
+#     :return: True or False for the existence of a match and True or False for the existence of a stable full cycle
+#     '''
+#     FC = False
+#     ismatch = False
+#     morsedecomposition = DSGRN.MorseDecomposition(domaingraph.digraph())
+#     morsegraph = DSGRN.MorseGraph(domaingraph, morsedecomposition)
+#     for i in range(0, morsegraph.poset().size()):
+#         if morsegraph.annotation(i)[0] == "FC" and len(morsedecomposition.poset().children(i)) == 0:
+#             FC = True
+#             searchgraph = DSGRN.SearchGraph(domaingraph, i)
+#             matchinggraph = DSGRN.MatchingGraph(searchgraph, patterngraph)
+#             if DSGRN.PathMatch(matchinggraph):
+#                 ismatch = True
+#                 break
+#     return ismatch,FC
+
+
 def stableFC_check(domaingraph,patterngraph):
     '''
     Check for match in any stable full cycle for one parameter
@@ -290,10 +313,9 @@ def stableFC_check(domaingraph,patterngraph):
     '''
     FC = False
     ismatch = False
-    morsedecomposition = DSGRN.MorseDecomposition(domaingraph.digraph())
-    morsegraph = DSGRN.MorseGraph(domaingraph, morsedecomposition)
-    for i in range(0, morsedecomposition.poset().size()):
-        if morsegraph.annotation(i)[0] == "FC" and len(morsedecomposition.poset().children(i)) == 0:
+    morsegraph = DSGRN.MorseGraph(domaingraph)
+    for i in range(0, morsegraph.poset().size()):
+        if morsegraph.annotation(i)[0] == "FC" and len(morsegraph.poset().children(i)) == 0:
             FC = True
             searchgraph = DSGRN.SearchGraph(domaingraph, i)
             matchinggraph = DSGRN.MatchingGraph(searchgraph, patterngraph)

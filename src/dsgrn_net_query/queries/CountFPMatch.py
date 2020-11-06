@@ -147,8 +147,7 @@ def DSGRN_Computation(parameter):
     :return: list of DSGRN annotations
     '''
     dg = DSGRN.DomainGraph(parameter)
-    md = DSGRN.MorseDecomposition(dg.digraph())
-    mg = DSGRN.MorseGraph(dg, md)
+    mg = DSGRN.MorseGraph(dg)
     return [mg.annotation(i)[0] for i in range(0, mg.poset().size()) if is_FP(mg.annotation(i)[0]) and len(mg.poset(
         ).children(i)) == 0]
 

@@ -92,8 +92,7 @@ def search_over_networks(count,N,enum_network):
     for p in range(parametergraph.size()):
         parameter = parametergraph.parameter(p)
         dg = DSGRN.DomainGraph(parameter)
-        md = DSGRN.MorseDecomposition(dg.digraph())
-        mg = DSGRN.MorseGraph(dg, md)
+        mg = DSGRN.MorseGraph(dg)
         stable_FC_annotations = [mg.annotation(i)[0] for i in range(0, mg.poset().size())
                                  if is_FC(mg.annotation(i)[0]) and len(mg.poset().children(i)) == 0]
         if count and len(stable_FC_annotations) > 0:

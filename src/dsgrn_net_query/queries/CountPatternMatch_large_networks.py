@@ -261,10 +261,9 @@ def stableFC_check(domaingraph,patterngraph):
     '''
     FC = False
     ismatch = False
-    morsedecomposition = DSGRN.MorseDecomposition(domaingraph.digraph())
-    morsegraph = DSGRN.MorseGraph(domaingraph, morsedecomposition)
-    for i in range(0, morsedecomposition.poset().size()):
-        if morsegraph.annotation(i)[0] == "FC" and len(morsedecomposition.poset().children(i)) == 0:
+    morsegraph = DSGRN.MorseGraph(domaingraph)
+    for i in range(0, morsegraph.poset().size()):
+        if morsegraph.annotation(i)[0] == "FC" and len(morsegraph.poset().children(i)) == 0:
             FC = True
             searchgraph = DSGRN.SearchGraph(domaingraph, i)
             matchinggraph = DSGRN.MatchingGraph(searchgraph, patterngraph)
