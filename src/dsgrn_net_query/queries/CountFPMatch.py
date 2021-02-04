@@ -4,6 +4,7 @@ from functools import partial
 from mpi4py import MPI
 from mpi4py.futures import MPICommExecutor
 from dsgrn_net_query.utilities.file_utilities import read_networks, create_results_folder
+from dsgrn_net_query.utilities.parameter_utilities import get_neighbors
 
 
 def query(network_file,params_file,resultsdir=""):
@@ -26,6 +27,8 @@ def query(network_file,params_file,resultsdir=""):
                     "count" : True or False (true or false in .json format);
                     whether to count all parameters with a match or shortcut at first success
                     "datetime" : optional datetime string to append to subdirectories in resultsdir, default = system time
+                    "neighbors" : optional True or False (true or false in .json format) stating whether to query DSGRN parameters that
+                    neighbor essential DSGRN parameters, neighbor-checking is computationally expensive, default = False
 
     :param resultsdir: optional path to directory where results will be written, default is current directory
 
@@ -94,9 +97,14 @@ def search_over_networks(params,N,enum_network):
     :return: (DSGRN network specification, results) pair
     '''
     (k, netspec) = enum_network
-    network, parametergraph = getpg(netspec)
+    if "neighbors" in params and params["neighbors"] is True:
+        noness_netspec, paramlist = get_neighbors(netspec)
+        network,parametergraph = getpg(noness_netspec)
+    else:
+        network, parametergraph = getpg(netspec)
+        paramlist = list(range(parametergraph.size()))
     numparams = 0
-    for p in range(parametergraph.size()):
+    for p in paramlist:
         if have_match(network, parametergraph.parameter(p), params["included_bounds"], params["excluded_bounds"]):
             if params["count"]:
                 numparams +=1
@@ -107,9 +115,9 @@ def search_over_networks(params,N,enum_network):
     print("Network {} of {} complete.".format(k + 1, N))
     sys.stdout.flush()
     if params["count"]:
-        return netspec,(numparams,parametergraph.size())
+        return netspec,(numparams,len(paramlist))
     else:
-        return netspec,(False,parametergraph.size())
+        return netspec,(False,len(paramlist))
 
 
 def getpg(netspec):
