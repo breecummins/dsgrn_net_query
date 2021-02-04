@@ -15,6 +15,18 @@ def test_count_stableFP():
     time.sleep(1)
 
 
+def test_count_stableFP_neighbors():
+    Path("temp_results").mkdir(exist_ok=True)
+    command = " ".join(["mpiexec", "-n", "2", "python", "../src/dsgrn_net_query/queries/CountFPMatch.py", "mpi_networks_FP.txt", "mpi_params_FPn.json", "temp_results",">dsgrn_net_query.log","2>&1"])
+    os.system(command)
+    qdir = subprocess.check_output("tail -n 1 dsgrn_net_query.log",shell=True).strip().decode("utf-8")
+    output_file = os.path.join(qdir,"query_results.json")
+    results = json.load(open(output_file))
+    assert(results == {'X1 : (X1)(~X3) : E\nX2 : (~X1) : E\nX3 : (X1 + X2) : E\n': [88, 1080], 'X1 : (X1)(~X3) : E\nX2 : (X1) : E\nX3 : (X1 + X2) : E\n': [86, 1080], 'X1 : (X1 + X2) : E\nX2 : (~X3) : E\nX3 : (X2) : E\n': [0, 28]})
+    subprocess.call(["rm","-r", "temp_results/"])
+    time.sleep(1)
+
+
 def test_stableFP2():
     Path("temp_results").mkdir(exist_ok=True)
     command = " ".join(["mpiexec", "-n", "2", "python", "../src/dsgrn_net_query/queries/CountFPMatch.py", "mpi_networks_FP.txt", "mpi_params_FP2.json", "temp_results",">dsgrn_net_query.log","2>&1"])
@@ -52,4 +64,4 @@ def test_multistability2():
 
 
 if __name__ == "__main__":
-    test_multistability2()
+    test_count_stableFP_neighbors()
