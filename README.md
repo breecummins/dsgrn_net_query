@@ -5,9 +5,9 @@ This module accepts a list of DSGRN-computable networks in a text file and perfo
 __References:__ http://epubs.siam.org/doi/abs/10.1137/15M1052743, https://link.springer.com/chapter/10.1007/978-3-319-67471-1_19, https://www.ncbi.nlm.nih.gov/pmc/articles/PMC5975363/, https://journals.plos.org/ploscompbiol/article?id=10.1371/journal.pcbi.1006121, https://epubs.siam.org/doi/abs/10.1137/17M1134548, https://doi.org/10.1007/s00285-020-01471-4
 
 
-__Dependencies:__ Python 3.6/3.7, mpi4py 3.0.3, pandas, progressbar2, DSGRN (https://github.com/shaunharker/DSGRN or https://github.com/marciogameiro/DSGRN), and min_interval_posets (https://github.com/breecummins/min_interval_posets).
+__Dependencies:__ `Python 3.6/3.7`, `mpi4py 3.0.3`, `pandas`, `progressbar2`, `DSGRN` (https://github.com/shaunharker/DSGRN or https://github.com/marciogameiro/DSGRN), `min_interval_posets` (https://github.com/breecummins/min_interval_posets), and `dsgrn_utilities` (https://github.com/breecummins/dsgrn_utilities).
 
-To install, do
+After installing all dependencies according to their instructions, do
 ```bash    
     cd dsgrn_net_query
     . install.sh
