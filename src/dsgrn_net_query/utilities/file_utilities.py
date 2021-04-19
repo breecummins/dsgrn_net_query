@@ -84,10 +84,10 @@ def create_results_folder(network_file, params_file, resultsdir, datetime=None):
         datetime = subprocess.check_output(['date +%Y_%m_%d_%H_%M_%S'], shell=True).decode(sys.stdout.encoding).strip()
     dirname = os.path.join(os.path.expanduser(resultsdir), "dsgrn_net_query_results" + datetime)
     queriesdir = os.path.join(dirname, "queries" + datetime)
-    os.makedirs(queriesdir)
+    os.makedirs(queriesdir,exist_ok=True)
     sys.stdout.flush()
     inputfilesdir = os.path.join(dirname, "inputs" + datetime)
-    os.makedirs(inputfilesdir)
+    os.makedirs(inputfilesdir,exist_ok=True)
     # save input files to computations folder
     shutil.copy(network_file, inputfilesdir)
     if params_file:
