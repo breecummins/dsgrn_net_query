@@ -200,12 +200,6 @@ def PathMatches_with_count(network, posets, domain, stablefc):
         for tsfile, poset_list in posets.items():
             for (eps, (events, event_ordering)) in poset_list:
                 patterngraph = DSGRN.PatternGraph(DSGRN.PosetOfExtrema(network,events,event_ordering))
-                if domain:
-                    dommatch = domain_check(domaingraph,patterngraph)
-                    if dommatch:
-                        numDomMatch[tsfile][str(eps)]+=1
-                        if len(posets) > 1:
-                            totalDom["all"][str(eps)].add(paramind)
                 if stablefc:
                     stabmatch, newFC = stableFC_check(domaingraph,patterngraph)
                     if newFC and not FC:
@@ -215,6 +209,22 @@ def PathMatches_with_count(network, posets, domain, stablefc):
                         numFCMatch[tsfile][str(eps)]+=1
                         if len(posets) > 1:
                             totalFC["all"][str(eps)].add(paramind)
+                    if stabmatch and domain:
+                        numDomMatch[tsfile][str(eps)] += 1
+                        if len(posets) > 1:
+                            totalDom["all"][str(eps)].add(paramind)
+                    elif not stabmatch and domain:
+                        dommatch = domain_check(domaingraph, patterngraph)
+                        if dommatch:
+                            numDomMatch[tsfile][str(eps)] += 1
+                            if len(posets) > 1:
+                                totalDom["all"][str(eps)].add(paramind)
+                if domain and not stablefc:
+                    dommatch = domain_check(domaingraph,patterngraph)
+                    if dommatch:
+                        numDomMatch[tsfile][str(eps)]+=1
+                        if len(posets) > 1:
+                            totalDom["all"][str(eps)].add(paramind)
     dommatches = {tsfile : [(float(eps),count,paramgraph.size()) for eps,count in edict.items()] for tsfile,edict in numDomMatch.items()}
     fcmatches = {tsfile : [(float(eps),count,numFC,paramgraph.size()) for eps,count in edict.items()] for tsfile,edict in numFCMatch.items()}
     if len(posets)>1:
