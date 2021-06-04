@@ -1,4 +1,4 @@
-import sys,os,json
+import sys,os,json,datetime
 
 
 helpstring = "Calling signature has four required arguments \n " \
@@ -18,15 +18,23 @@ if len(sys.argv) > 5:
 else:
     resultsdir = ""
 
+param_dict = json.load(open(param_file))
+if "datetime" not in param_dict:
+    datetimestr = datetime.datetime.now().strftime('%Y%m%d%H%M%S')
+    param_dict["datetime"] = datetimestr
+    json.dump(param_dict,open(param_file,"w"))
+else:
+    datetimestr = param_dict["datetime"]
+
 
 if "CountStableFC_large_networks.py" not in query:
-    command = " ".join(["mpiexec", "-n", num_proc, "python", "src/dsgrn_net_query/queries/{}".format(query), network_file, param_file, resultsdir,">dsgrn_net_query.log","2>&1"])
+    command = " ".join(["mpiexec", "-n", num_proc, "python", "src/dsgrn_net_query/queries/{}".format(query), network_file, param_file, resultsdir,">dsgrn_net_query{}.log".format(datetimestr),"2>&1"])
 else:
     # overwrite number of processes in parameter file with the commandline argument
     params = json.load(open(param_file))
     params["num_proc"] = num_proc
     json.dump(params,open(param_file,"w"))
-    command = " ".join(["python", "src/dsgrn_net_query/queries/{}".format(query), network_file, param_file, resultsdir,">dsgrn_net_query.log","2>&1"])
+    command = " ".join(["python", "src/dsgrn_net_query/queries/{}".format(query), network_file, param_file, resultsdir,">dsgrn_net_query{}.log".format(datetimestr),"2>&1"])
 
 os.system(command)
 
