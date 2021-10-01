@@ -14,7 +14,7 @@ def query(network_file,params_file,resultsdir=""):
     The result is the count of the number of DSGRN parameters with a match OR is True if there is at least one match
     and False if not, depending on the choice of the parameter "count".
 
-    :param network_file: a .txt file containing either a single DSGRN network specification or a list of network
+    :param network_file: a .txt file containing a single DSGRN network specification
     specification strings in DSGRN format
     :param params_file: A .json file containing a dictionary with the keys
         "domain" : True or False (true or false in .json format), whether or not to perform a path search anywhere in the domain graph
@@ -23,6 +23,7 @@ def query(network_file,params_file,resultsdir=""):
         "count" : True or False (true or false in .json format), whether to count all DSGRN parameters or shortcut at first success
             NOTE: Only count = True is currently implemented
         "datetime" : optional datetime string to append to subdirectories in resultsdir, default = system time
+        "parameter_list" : optional sublist of the parameter graph
 
         One can either specify posets directly, or extract posets from timeseries data.
         Include EITHER the three keys
@@ -59,12 +60,13 @@ def query(network_file,params_file,resultsdir=""):
         parameters with a match to at least one time series dataset.
     '''
 
-    networks = read_networks(network_file)
+    spec = read_networks(network_file)
+    print(spec)
     param_dict = json.load(open(params_file))
 
     sanity_check(param_dict)
 
-    posets,networks = get_posets(networks,param_dict)
+    posets,networks = get_posets(spec,param_dict)
     print("Querying networks.\n")
 
     if not networks:
@@ -74,17 +76,20 @@ def query(network_file,params_file,resultsdir=""):
         results = {}
         if param_dict["count"]:
             with MPICommExecutor() as executor:
-                for k,spec in enumerate(networks):
-                    results[spec] = {}
-                    network = DSGRN.Network(spec)
-                    param_graph = DSGRN.ParameterGraph(network)
+                spec = spec[0]
+                results[spec] = {}
+                network = DSGRN.Network(spec)
+                param_graph = DSGRN.ParameterGraph(network)
+                if "parameter_list" in param_dict:
+                    dsgrn_params = [(p,param_graph.parameter(p)) for p in param_dict["parameter_list"]]
+                else:
                     dsgrn_params = [(p,param_graph.parameter(p)) for p in range(param_graph.size())]
-                    names = tuple(sorted([network.name(k) for k in range(network.size())]))
-                    work_function = partial(PathMatch, network, posets[names], param_dict["domain"], param_dict["stablefc"])
-                    output=dict(executor.map(work_function, dsgrn_params))
-                    results[spec] = reformat_output(output, list(posets[names].keys()), param_dict, param_graph.size())
-                    print("Network {} of {} complete.".format(k + 1, len(networks)))
-                    sys.stdout.flush()
+                names = tuple(sorted([network.name(k) for k in range(network.size())]))
+                work_function = partial(PathMatch, network, posets[names], param_dict["domain"], param_dict["stablefc"])
+                output=dict(executor.map(work_function, dsgrn_params))
+                results[spec] = reformat_output(output, list(posets[names].keys()), param_dict, param_graph.size())
+                print("Network {} of {} complete.".format(1, 1))
+                sys.stdout.flush()
                 record_results(network_file, params_file, results, resultsdir, param_dict)
         else:
             raise ValueError("Existence of path match without counting is not yet implemented for large networks. Use CountPatternMatch.py.")

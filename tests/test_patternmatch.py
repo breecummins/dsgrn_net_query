@@ -76,7 +76,7 @@ def test_patternmatch3():
 
 def test_patternmatch_ln():
     Path("temp_results").mkdir(exist_ok=True)
-    command = " ".join(["mpiexec", "-n", "2", "python", "../src/dsgrn_net_query/queries/CountPatternMatch_large_networks.py", "mpi_networks_pm.txt", "mpi_params_pm.json", "temp_results",">dsgrn_net_query.log","2>&1"])
+    command = " ".join(["mpiexec", "-n", "2", "python", "../src/dsgrn_net_query/queries/CountPatternMatch_large_networks.py", "mpi_network_pm_ln.txt", "mpi_params_pm.json", "temp_results",">dsgrn_net_query.log","2>&1"])
     os.system(command)
     # qdir = subprocess.check_output("tail -n 1 dsgrn_net_query.log",shell=True).strip().decode("utf-8")
     qdir = open(".query_results.log").read().strip()
@@ -92,14 +92,10 @@ def test_patternmatch_ln():
     results4 = json.load(open(output_file4))
     results5 = json.load(open(output_file5))
     results6 = json.load(open(output_file6))
-    assert(results1 == {"SWI4 : (NDD1)(~YOX1) : E\nHCM1 : SWI4 : E\nNDD1 : HCM1 : E\nYOX1 : SWI4 : E": [[0.0, 0, 14], [0.01, 8, 14], [0.05, 5, 14]],
-                        "SWI4 : (NDD1)(~YOX1) : E\nHCM1 : SWI4 : E\nNDD1 : HCM1 : E\nYOX1 : NDD1 : E": [[0.0, 0, 4], [0.01, 0, 4], [0.05, 2, 4]]})
-    assert(results2 == {"SWI4 : (NDD1)(~YOX1) : E\nHCM1 : SWI4 : E\nNDD1 : HCM1 : E\nYOX1 : SWI4 : E": [[0.0, 0, 2, 14], [0.01, 2, 2, 14], [0.05, 1, 2, 14]],
-                        "SWI4 : (NDD1)(~YOX1) : E\nHCM1 : SWI4 : E\nNDD1 : HCM1 : E\nYOX1 : NDD1 : E": [[0.0, 0, 0, 4], [0.01, 0, 0, 4], [0.05, 0, 0, 4]]})
-    assert(results3 == {'SWI4 : (NDD1)(~YOX1) : E\nHCM1 : SWI4 : E\nNDD1 : HCM1 : E\nYOX1 : NDD1 : E': [[0.0, 0, 4], [0.01, 0, 4], [0.05, 0, 4]],
-                        'SWI4 : (NDD1)(~YOX1) : E\nHCM1 : SWI4 : E\nNDD1 : HCM1 : E\nYOX1 : SWI4 : E': [[0.0, 0, 14], [0.01, 0, 14], [0.05, 0, 14]]})
-    assert(results4 == {'SWI4 : (NDD1)(~YOX1) : E\nHCM1 : SWI4 : E\nNDD1 : HCM1 : E\nYOX1 : NDD1 : E': [[0.0, 0, 0, 4], [0.01, 0, 0, 4], [0.05, 0, 0, 4]],
-                        'SWI4 : (NDD1)(~YOX1) : E\nHCM1 : SWI4 : E\nNDD1 : HCM1 : E\nYOX1 : SWI4 : E': [[0.0, 0, 2, 14], [0.01, 0, 2, 14], [0.05, 0, 2, 14]]})
+    assert(results1 == {"SWI4 : (NDD1)(~YOX1) : E\nHCM1 : SWI4 : E\nNDD1 : HCM1 : E\nYOX1 : SWI4 : E": [[0.0, 0, 14], [0.01, 8, 14], [0.05, 5, 14]]})
+    assert(results2 == {"SWI4 : (NDD1)(~YOX1) : E\nHCM1 : SWI4 : E\nNDD1 : HCM1 : E\nYOX1 : SWI4 : E": [[0.0, 0, 2, 14], [0.01, 2, 2, 14], [0.05, 1, 2, 14]]})
+    assert(results3 == {'SWI4 : (NDD1)(~YOX1) : E\nHCM1 : SWI4 : E\nNDD1 : HCM1 : E\nYOX1 : SWI4 : E': [[0.0, 0, 14], [0.01, 0, 14], [0.05, 0, 14]]})
+    assert(results4 == {'SWI4 : (NDD1)(~YOX1) : E\nHCM1 : SWI4 : E\nNDD1 : HCM1 : E\nYOX1 : SWI4 : E': [[0.0, 0, 2, 14], [0.01, 0, 2, 14], [0.05, 0, 2, 14]]})
     assert(results5==results1)
     assert(results6==results2)
     subprocess.call(["rm","-r", "temp_results/"])
@@ -130,20 +126,21 @@ def test_patternmatch_ln():
 #     subprocess.call(["rm","-r", "temp_results/"])
 
 
-def test_patternmatch_ln3():
-    Path("temp_results").mkdir(exist_ok=True)
-    command = " ".join(["mpiexec", "-n", "2", "python", "../src/dsgrn_net_query/queries/CountPatternMatch_large_networks.py", "networks_stable_X1X2X3.txt", "params_patternmatch_stable_X1X2X3.json", "temp_results",">dsgrn_net_query.log","2>&1"])
-    os.system(command)
-    # qdir = subprocess.check_output("tail -n 1 dsgrn_net_query.log",shell=True).strip().decode("utf-8")
-    qdir = open(".query_results.log").read().strip()
-    output_file2 = os.path.join(qdir,"query_results_stablefc_no_time_series_file.json")
-    results2 = json.load(open(output_file2))
-    assert (results2 == {
-        'X1 : (X1)(~X3) : E\nX2 : (X3)(~X1) : E\nX3 : (X1 + X2) : E\n': [[0.0, 0, 152, 2352], [0.1, 0, 152, 2352]],
-         'X1 : (X1)(~X3) : E\nX2 : (X1 + X3) : E\nX3 : (X1 + X2) : E\n': [[0.0, 205, 500, 2352], [0.1, 317, 500, 2352]],
-         'X1 : (X1)(~X3) : E\nX2 : (X1) : E\nX3 : (X1 + X2) : E\n': [[0.0, 40, 76, 168], [0.1, 54, 76, 168]]
-})
-    subprocess.call(["rm","-r", "temp_results/"])
+# def test_patternmatch_ln3():
+#     Path("temp_results").mkdir(exist_ok=True)
+#     command = " ".join(["mpiexec", "-n", "2", "python", "../src/dsgrn_net_query/queries/CountPatternMatch_large_networks.py", "networks_stable_X1X2X3.txt", "params_patternmatch_stable_X1X2X3.json", "temp_results",">dsgrn_net_query.log","2>&1"])
+#     os.system(command)
+#     # qdir = subprocess.check_output("tail -n 1 dsgrn_net_query.log",shell=True).strip().decode("utf-8")
+#     qdir = open(".query_results.log").read().strip()
+#     output_file2 = os.path.join(qdir,"query_results_stablefc_no_time_series_file.json")
+#     results2 = json.load(open(output_file2))
+#     assert (results2 == {
+#         'X1 : (X1)(~X3) : E\nX2 : (X3)(~X1) : E\nX3 : (X1 + X2) : E\n': [[0.0, 0, 152, 2352], [0.1, 0, 152, 2352]],
+#          'X1 : (X1)(~X3) : E\nX2 : (X1 + X3) : E\nX3 : (X1 + X2) : E\n': [[0.0, 205, 500, 2352], [0.1, 317, 500, 2352]],
+#          'X1 : (X1)(~X3) : E\nX2 : (X1) : E\nX3 : (X1 + X2) : E\n': [[0.0, 40, 76, 168], [0.1, 54, 76, 168]]
+# })
+#     subprocess.call(["rm","-r", "temp_results/"])
+
 
 if __name__ == "__main__":
-    test_patternmatch3()
+    test_patternmatch_ln()
