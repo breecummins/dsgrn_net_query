@@ -61,7 +61,6 @@ def query(network_file,params_file,resultsdir=""):
     '''
 
     spec = read_networks(network_file)
-    print(spec)
     param_dict = json.load(open(params_file))
 
     sanity_check(param_dict)
@@ -149,21 +148,33 @@ def record_results(network_file, params_file,results,resultsdir,params):
             os.rename(rname, rname + ".old")
         json.dump(rdict, open(rname, 'w'))
 
-    #FIXME: reparse results["param_list"]
     reparse = {}
+    reparse_params = {}
     for netspec,ER in results.items():
         for search,tsdict in ER.items():
-            if params[search]:
+            if search != "param_list" and params[search]:
                 for ts, rlist in tsdict.items():
                     key = (search,ts)
                     if key in reparse:
                         reparse[key].append((netspec,rlist))
                     else:
                         reparse[key] = [(netspec,rlist)]
-    #FIXME: save parameter list files as "query_results_{}_{}_param_list.json".format(key[0], ts)
+            elif search == "param_list":
+                for p_search,p_tsdict in tsdict.items():
+                    for pts, plist in p_tsdict.items():
+                        key = (p_search,pts)
+                        if key in reparse_params:
+                            reparse_params[key].append((netspec,plist))
+                        else:
+                            reparse_params[key] = [(netspec,plist)]
     for key,list_of_tup in reparse.items():
-        ts = key[1].split("/")[-1].split(".")[0]
+        ts = os.path.splitext(os.path.basename(key[1]))[0]
+        # ts = key[1].split("/")[-1].split(".")[0]
         rname = os.path.join(resultsdir, "query_results_{}_{}.json".format(key[0], ts))
+        savefile(rname,dict(list_of_tup))
+    for key,list_of_tup in reparse_params.items():
+        ts = os.path.splitext(os.path.basename(key[1]))[0]
+        rname = os.path.join(resultsdir, "query_results_{}_{}_param_list.json".format(key[0], ts))
         savefile(rname,dict(list_of_tup))
     open(".query_results.log","w").write(resultsdir)
 
@@ -176,48 +187,48 @@ def reformat_output(output, tsfiles, param_dict, pgsize):
         domain_bool = param_dict["domain"]
         stablefc_bool = param_dict["stablefc"]
         eps = param_dict["epsilons"]
-        res = {}
+        res = {"param_list": {} }
         if domain_bool:
-            res["domain"] = dict.fromkeys(ts_keys, {})
+            res["domain"] = {t: set([]) for t in ts_keys}
+            res["param_list"]["domain"] = {}
             if len(tsfiles) > 1:
                 all_match["domain"] = {e: set([]) for e in eps}
         if stablefc_bool:
-            res["stablefc"] = dict.fromkeys(ts_keys, {})
+            res["stablefc"] = {t: set([]) for t in ts_keys}
+            res["param_list"]["stablefc"] = {}
             if len(tsfiles) > 1:
                 all_match["stablefc"] = {e: set([]) for e in eps}
         for tsfile in tsfiles:
-            domain_match = dict.fromkeys(eps, set([]))
+            domain_match = {e: set([]) for e in eps}
             stablefc = 0
-            stablefc_match = dict.fromkeys(eps, set([]))
+            stablefc_match = {e: set([]) for e in eps}
             for param_index, data in output.items():
                 if domain_bool:
-                    for e, b in data["domain"][tsfile].items():
-                        if b:
-                            domain_match[e].add(param_index)
+                    for epsilon, booln in data["domain"][tsfile].items():
+                        if booln:
+                            domain_match[epsilon].add(param_index)
                             if len(tsfiles) > 1:
-                                all_match["domain"][e].add(param_index)
+                                all_match["domain"][epsilon].add(param_index)
                 if stablefc_bool:
                     stablefc += data["stablefc"]
-                    for e, b in data["match"][tsfile].items():
-                        if b:
-                            stablefc_match[e].add(param_index)
+                    for epsilon, booln in data["match"][tsfile].items():
+                        if booln:
+                            stablefc_match[epsilon].add(param_index)
                             if len(tsfiles) > 1:
-                                all_match["stablefc"][e].add(param_index)
+                                all_match["stablefc"][epsilon].add(param_index)
             if domain_bool:
-                #FIXME: Make paramlist into count
-                res["domain"][tsfile] = [d + [pgsize] for d in sorted([list(m) for m in domain_match.items()])]
-                #FIXME: Add param list to res["param_list"]["domain"][tsfile]
+                res["domain"][tsfile] = [d + [pgsize] for d in sorted([[m[0],len(m[1])] for m in domain_match.items()])]
+                res["param_list"]["domain"][tsfile] = sorted([[m[0],sorted(list(m[1]))] for m in domain_match.items()])
             if stablefc_bool:
-                #FIXME: Make paramlist into count
-                res["stablefc"][tsfile] = [d + [stablefc, pgsize] for d in sorted([list(m) for m in stablefc_match.items()])]
-                #FIXME: Add param list to res["param_list"]["stablefc"][tsfile]
+                res["stablefc"][tsfile] = [d + [stablefc, pgsize] for d in sorted([[m[0],len(m[1])] for m in stablefc_match.items()])]
+                res["param_list"]["stablefc"][tsfile] = sorted([[m[0],sorted(list(m[1]))] for m in stablefc_match.items()])
         if len(tsfiles) > 1:
             if domain_bool:
                 res["domain"]["all"] = sorted([[e, len(plist), pgsize] for e, plist in all_match["domain"].items()])
-                #FIXME: Add param list to res["param_list"]["domain"]["all"]
+                res["param_list"]["domain"]["all"] = sorted([[m[0],sorted(list(m[1]))] for m in all_match["domain"].items()])
             if stablefc_bool:
                 res["stablefc"]["all"] = sorted([[e, len(plist), stablefc, pgsize] for e, plist in all_match["stablefc"].items()])
-                #FIXME: Add param list to res["param_list"]["stablefc"]["all"]
+                res["param_list"]["stablefc"]["all"] = sorted([[m[0],sorted(list(m[1]))] for m in all_match["stablefc"].items()])
         return res
 
 

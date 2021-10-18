@@ -61,7 +61,6 @@ def query(network_file,params_file,resultsdir=""):
     '''
 
     spec = read_networks(network_file)
-    print(spec)
     param_dict = json.load(open(params_file))
 
     sanity_check(param_dict)
@@ -176,17 +175,17 @@ def reformat_output(output, tsfiles, param_dict, pgsize):
         eps = param_dict["epsilons"]
         res = {}
         if domain_bool:
-            res["domain"] = dict.fromkeys(ts_keys, {})
+            res["domain"] = {t : {} for t in ts_keys}
             if len(tsfiles) > 1:
                 all_match["domain"] = {e: set([]) for e in eps}
         if stablefc_bool:
-            res["stablefc"] = dict.fromkeys(ts_keys, {})
+            res["stablefc"] = {t : {} for t in ts_keys}
             if len(tsfiles) > 1:
                 all_match["stablefc"] = {e: set([]) for e in eps}
         for tsfile in tsfiles:
-            domain_match = dict.fromkeys(eps, 0)
+            domain_match = {e: 0 for e in eps}
             stablefc = 0
-            stablefc_match = dict.fromkeys(eps, 0)
+            stablefc_match = {e: 0 for e in eps}
             for param_index, data in output.items():
                 if domain_bool:
                     for e, b in data["domain"][tsfile].items():
